@@ -20,6 +20,11 @@ export default function TabLayout() {
     Manrope_600SemiBold, 
     Manrope_700Bold
   });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+  
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
