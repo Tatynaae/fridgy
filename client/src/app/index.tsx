@@ -6,6 +6,8 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
+import * as Device from 'expo-device';
+import { Platform, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -44,6 +46,20 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <ThemedView style={styles.header}>
+          {/* <AnimatedIcon /> */}
+          <ThemedView>
+            <Image style={styles.logo} source={require("../../assets/img/logo.png")}/>
+            <ThemedText>Добрый вечер </ThemedText>
+          </ThemedView>
+        </ThemedView>
+
+        <ThemedText style={styles.heading}>Что приготовим сегодня?</ThemedText>
+
+        {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
     </View>
   );
@@ -65,6 +81,21 @@ const styles = StyleSheet.create({
     height: 52,
     marginLeft: 4,
     marginBottom: 20,
+  header: {
+    width: '100%',
+  },
+  logo: {
+    width: 65,
+    height: 52
+  },
+  heading: {
+    width: 334,
+    height: 36,
+    fontFamily: "Manrope",
+    fontSize: 26,
+    fontWeight: "700",
+    fontStyle: "normal",
+    lineHeight: 26,
   },
 
   greeting: {
