@@ -7,8 +7,11 @@ import {
   Manrope_600SemiBold,
   Manrope_700Bold
 } from '@expo-google-fonts/manrope';
+import { useState } from 'react';
 
 export default function HomeScreen() {
+  const [filter, setFilter] = useState<number>(1);
+  
   let [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
@@ -19,6 +22,10 @@ export default function HomeScreen() {
   if (!fontsLoaded) {
     return null;
   }
+
+  const toggleFilters = (value: number) => {
+    setFilter(value);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -48,6 +55,51 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.filters}>
+          <Text style={styles.filtersHeading}>Под тебя сегодня</Text>
+          <View style={styles.filterItems}>
+            <Pressable onPress={() => toggleFilters(1)} style={[
+                styles.filterItem, 
+                filter === 1 && styles.activeFilterItem
+                ]}>
+              <Text style={{color: filter === 1 ? '#fff' : '#000'}}>
+                  До 20 мин
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => toggleFilters(2)} style={[
+                styles.filterItem, 
+                filter === 2 && styles.activeFilterItem
+                ]}>
+              <Text style={{color: filter === 2 ? '#fff' : '#000'}}>
+                  ≤ 500 ккал
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => toggleFilters(3)} style={[
+                styles.filterItem, 
+                filter === 3 && styles.activeFilterItem
+                ]}>
+              <Text style={{color: filter === 3 ? '#fff' : '#000'}}>
+                  Веган
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.ideas}>
+          <Text style={styles.ideasHeading}>Быстрые идеи</Text>
+          <View style={styles.ideasList}>
+            <View style={styles.idea}>
+              <Text>🍝</Text>
+              <Text style={styles.ideaTitle}>Паста с овощами</Text>
+              <Text style={styles.ideaDesc}>15 мин · 420 ккал</Text>
+            </View>
+            <View style={styles.idea}>
+              <Text>🥗</Text>
+              <Text style={styles.ideaTitle}>Греческий салат</Text>
+              <Text style={styles.ideaDesc}>20 мин · 380 ккал</Text>
+            </View>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -62,6 +114,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 10,
+    backgroundColor: '#F6FAFC'
   },
   logo: {
     width: 65,
@@ -127,5 +180,67 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope_600SemiBold',
     fontSize: 13,
     color: '#FFFFFF',
+  },
+  filters: {
+    width: '100%',
+    marginTop: 24,
+    gap: 14
+  },
+  filtersHeading: {
+    color: '#0A141A',
+    fontFamily: 'Manrope_600SemiBold',
+    fontSize: 16,
+  },
+  filterItems: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  filterItem: {
+    textAlign: 'center',
+    width: '30%',
+    backgroundColor: '#EDF2F5',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+  },
+  activeFilterItem: {
+    backgroundColor: '#1479C9'
+  },
+  ideas: {
+    width: '100%',
+    marginTop: 24,
+    gap: 14
+  },
+  ideasHeading: {
+    color: '#0A141A',
+    fontFamily: 'Manrope_600SemiBold',
+    fontSize: 16,
+  },
+  ideasList: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18
+  },
+  idea: {
+    width: '48%',
+    backgroundColor: '#fff',
+    padding: 12,
+    flexDirection: 'column',
+    borderRadius: 20,
+  },
+  ideaTitle: {
+    color: '#0A141A',
+    fontSize: 13,
+    fontFamily: 'Manrope_600SemiBold',
+    marginTop: 12
+  },
+  ideaDesc: {
+    color: '#546871',
+    fontFamily: ' Manrope_400Regular',
+    fontSize: 11,
+    marginTop: 8
   }
 });
