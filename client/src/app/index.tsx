@@ -1,94 +1,141 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet, Image } from 'react-native';
+import { StyleSheet, Image, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { 
+  useFonts, 
+  Manrope_300Light,
+  Manrope_400Regular,
+  Manrope_600SemiBold,
+  Manrope_700Bold
+} from '@expo-google-fonts/manrope';
 
 export default function HomeScreen() {
+  let [fontsLoaded] = useFonts({
+    Manrope_300Light,
+    Manrope_400Regular,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.header}>
-          {/* <AnimatedIcon /> */}
-          <ThemedView>
-            <Image style={styles.logo} source={require("../../assets/img/logo.png")}/>
-            <ThemedText>Добрый вечер </ThemedText>
-          </ThemedView>
-        </ThemedView>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Image style={styles.logo} source={require("../../assets/img/logo.png")}/>
+        
+        <View style={styles.headerText}>
+          <Text style={styles.greeting}>Добрый вечер</Text>
+          <Text style={styles.heading}>Что приготовим сегодня?</Text>
+        </View>
 
-        <ThemedText style={styles.heading}>Что приготовим сегодня?</ThemedText>
+        <View style={styles.banner}>
+          <Text style={styles.bannerLabel}>AI-помощник</Text>
+          
+          <View style={styles.bannerTextGroup}>
+            <Text style={styles.bannerTitle}>
+              Покажи холодильник -{'\n'}найду ужин за минуту
+            </Text>
+            <Text style={styles.bannerSubtitle}>
+              Сфотографируй продукты, и Fridgy предложит простые рецепты из того, что уже есть.
+            </Text>
+          </View>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+          <TouchableOpacity style={styles.button} activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Сканировать продукты</Text>
+          </TouchableOpacity>
+        </View>
+
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    backgroundColor: '#ffffff',
   },
-  header: {
-    width: '100%',
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 10,
   },
   logo: {
     width: 65,
-    height: 52
+    height: 52,
+  },
+  headerText: {
+    marginTop: 24, 
+    gap: 8,
+    width: 334,
+  },
+  greeting: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 14,
+    color: '#8A8A8E',
   },
   heading: {
-    width: 334,
-    height: 36,
-    fontFamily: "Manrope",
+    fontFamily: 'Manrope_700Bold',
     fontSize: 26,
-    fontWeight: "700",
-    fontStyle: "normal",
     lineHeight: 26,
+    color: '#1C1C1E',
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+ 
+banner: {
+  width: '100%',
+  alignSelf: 'stretch',
+  backgroundColor: '#E8F6FC',
+  borderRadius: 24,
+  marginTop: 24,
+  paddingHorizontal: 24,
+  paddingTop: 20,
+  paddingBottom: 20,
+  gap: 10,
+},
+
+bannerLabel: {
+  fontFamily: 'Manrope_600SemiBold',
+  fontSize: 12,
+  color: '#168CE1',
+},
+
+bannerTextGroup: {
+  width: '100%',
+  gap: 10,
+},
+
+bannerTitle: {
+  fontFamily: 'Manrope_700Bold',
+  fontSize: 20,
+  lineHeight: 32,
+  color: '#1C1C1E',
+},
+
+bannerSubtitle: {
+  fontFamily: 'Manrope_400Regular',
+  fontSize: 12,
+  lineHeight: 21,
+  color: '#546871',
+},
+
+button: {
+  width: '100%',
+  height: 48,
+  backgroundColor: '#1479C9',
+  borderRadius: 12,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 8,
+  marginTop: 6,
+},
+
+buttonText: {
+  fontFamily: 'Manrope_600SemiBold',
+  fontSize: 13,
+  color: '#FFFFFF',
+  textAlign: 'center',
+},
+
 });
