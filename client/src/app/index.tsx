@@ -8,9 +8,11 @@ import {
   Manrope_700Bold
 } from '@expo-google-fonts/manrope';
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const [filter, setFilter] = useState<number>(1);
+  const router = useRouter();
   
   let [fontsLoaded] = useFonts({
     Manrope_300Light,
@@ -50,7 +52,7 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          <Pressable style={styles.button}>
+          <Pressable style={styles.button} onPress={() => router.push('/scan')}>
             <Text style={styles.buttonText}>Сканировать продукты</Text>
           </Pressable>
         </View>
