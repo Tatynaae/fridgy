@@ -17,6 +17,7 @@ import {
   chevronRightIcon,
   logOutIcon,
 } from '@/constants/profile-icons';
+import { useNavigation } from 'expo-router';
 
 const settings = [
   { id: 'personal', label: 'Личные данные', icon: userRoundIcon },
@@ -26,6 +27,7 @@ const settings = [
 ];
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
   let [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
@@ -56,6 +58,7 @@ export default function ProfileScreen() {
           {settings.map((item) => (
             <Pressable
               key={item.id}
+              onPress={() => navigation.navigate(item.id as never)}
               style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
             >
               <View style={styles.settingIcon}>
