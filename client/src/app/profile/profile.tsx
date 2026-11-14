@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, StatusBar, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
+import { useNavigation } from 'expo-router';
 import {
   useFonts,
   Manrope_300Light,
@@ -26,6 +27,25 @@ const settings = [
 ];
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
+
+  const openScreen = (id: string) => {
+    switch (id) {
+      case 'personal':
+        navigation.navigate('personal-data' as never);
+        break;
+      case 'nutrition':
+        navigation.navigate('nutrition-settings' as never);
+        break;
+      case 'notifications':
+        navigation.navigate('notifications' as never);
+        break;
+      case 'support':
+        navigation.navigate('support' as never);
+        break;
+    }
+  };
+
   let [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
@@ -54,9 +74,10 @@ export default function ProfileScreen() {
 
         <View style={styles.settings}>
           {settings.map((item) => (
-            <Pressable
+           <Pressable
               key={item.id}
               style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
+              onPress={() => openScreen(item.id)}
             >
               <View style={styles.settingIcon}>
                 <SvgXml xml={item.icon} />
