@@ -39,7 +39,7 @@ export default function AppTabs() {
             </TabButton>
           </TabTrigger>
 
-          <TabTrigger name="profile" href="/profile" asChild>
+          <TabTrigger name="profile" href="/profile/ProfileMain" asChild>
             <TabButton icon="person-outline" activeIcon="person">
               Профиль
             </TabButton>
@@ -55,7 +55,7 @@ export default function AppTabs() {
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
-type ButtonProps = TabTriggerSlotProps & {
+type ButtonProps = Omit<TabTriggerSlotProps, 'ref'> & {
   children: string;
   icon: IconName;
   activeIcon: IconName;
