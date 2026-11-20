@@ -18,7 +18,7 @@ export default function HomeScreen() {
     Manrope_600SemiBold,
     Manrope_700Bold,
   });
-
+ 
   if (!fontsLoaded) {
     return null;
   }
