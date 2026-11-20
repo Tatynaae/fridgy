@@ -54,3 +54,21 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# Навигация профиля
+
+Во вкладке «Профиль» используется вложенный `Stack` Expo Router:
+`ProfileMain`, `PersonalData`, `NutritionSettings`, `Notifications`, `Support`.
+Пункты меню вызывают `navigation.navigate()` с типизированным именем экрана.
+`ProfileMain` задан как `anchor`, поэтому прямая ссылка на детальный экран
+также сохраняет возможность вернуться к профилю.
+
+Проверка задания:
+
+1. Запустите приложение через `npm start` и откройте вкладку «Профиль».
+2. Поочерёдно откройте все четыре пункта и вернитесь стрелкой в хедере.
+3. На Android повторите возврат системной кнопкой «Назад».
+4. На iOS повторите возврат свайпом от левого края.
+5. Откройте прямую ссылку `/profile/PersonalData` и проверьте стрелку назад.
+
+Содержимое детальных экранов демонстрационное; сохранение настроек и
+подключение аккаунта к серверу не входят в эту задачу.

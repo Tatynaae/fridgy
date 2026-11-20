@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, StatusBar, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Image, Pressable, ScrollView } from 'react-native';
+import { useNavigation, type NativeStackNavigationProp } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 import {
@@ -17,15 +18,17 @@ import {
   chevronRightIcon,
   logOutIcon,
 } from '@/constants/profile-icons';
+import type { ProfileStackParamList } from '@/constants/profile-navigation';
 
 const settings = [
-  { id: 'personal', label: 'Личные данные', icon: userRoundIcon },
-  { id: 'nutrition', label: 'Настройки питания', icon: saladIcon },
-  { id: 'notifications', label: 'Уведомления', icon: bellIcon },
-  { id: 'support', label: 'Служба поддержки', icon: headphonesIcon },
-];
+  { screen: 'PersonalData', label: 'Личные данные', icon: userRoundIcon },
+  { screen: 'NutritionSettings', label: 'Настройки питания', icon: saladIcon },
+  { screen: 'Notifications', label: 'Уведомления', icon: bellIcon },
+  { screen: 'Support', label: 'Служба поддержки', icon: headphonesIcon },
+] as const;
 
-export default function ProfileScreen() {
+export default function ProfileMain() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   let [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
@@ -41,7 +44,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar hidden={false}/>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container}>
         <Image style={styles.logo} source={require("@/assets/img/logo.png")}/>
 
         <View style={styles.info}>
@@ -55,7 +58,10 @@ export default function ProfileScreen() {
         <View style={styles.settings}>
           {settings.map((item) => (
             <Pressable
-              key={item.id}
+              key={item.screen}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              onPress={() => navigation.navigate(item.screen)}
               style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
             >
               <View style={styles.settingIcon}>
@@ -71,7 +77,7 @@ export default function ProfileScreen() {
           <SvgXml xml={logOutIcon} />
           <Text style={styles.logoutLabel}>Выйти из аккаунта</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -82,9 +88,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6FAFC',
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 10,
+    paddingBottom: 110,
     backgroundColor: '#F6FAFC'
   },
   logo: {
