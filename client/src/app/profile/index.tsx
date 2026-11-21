@@ -1,6 +1,10 @@
+
 import { View, Text, StyleSheet, StatusBar, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
+import { useNavigation } from 'expo-router';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
 import {
   useFonts,
   Manrope_300Light,
@@ -9,6 +13,7 @@ import {
   Manrope_600SemiBold,
   Manrope_700Bold
 } from '@expo-google-fonts/manrope';
+
 import {
   userRoundIcon,
   saladIcon,
@@ -18,14 +23,28 @@ import {
   logOutIcon,
 } from '@/constants/profile-icons';
 
+type ProfileStackParamList = {
+  index: undefined;
+  PersonalData: undefined;
+  NutritionSettings: undefined;
+  Notifications: undefined;
+  Support: undefined;
+};
+
+type ProfileNavigation = NativeStackNavigationProp<
+  ProfileStackParamList,
+  'index'
+>;
+
 const settings = [
-  { id: 'personal', label: 'Личные данные', icon: userRoundIcon },
-  { id: 'nutrition', label: 'Настройки питания', icon: saladIcon },
-  { id: 'notifications', label: 'Уведомления', icon: bellIcon },
-  { id: 'support', label: 'Служба поддержки', icon: headphonesIcon },
-];
+  { id: 'personal', label: 'Личные данные', icon: userRoundIcon, screen: 'PersonalData' },
+  { id: 'nutrition', label: 'Настройки питания', icon: saladIcon, screen: 'NutritionSettings' },
+  { id: 'notifications', label: 'Уведомления', icon: bellIcon, screen: 'Notifications' },
+  { id: 'support', label: 'Служба поддержки', icon: headphonesIcon, screen: 'Support' },
+] as const;
 
 export default function ProfileScreen() {
+  const navigation = useNavigation('/profile') as ProfileNavigation;
   let [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
@@ -40,12 +59,20 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar hidden={false}/>
+      <StatusBar hidden={false} />
+
       <View style={styles.container}>
-        <Image style={styles.logo} source={require("@/assets/img/logo.png")}/>
+        <Image
+          style={styles.logo}
+          source={require('@/assets/img/logo.png')}
+        />
 
         <View style={styles.info}>
-          <Image style={styles.avatar} source={require("@/assets/img/user.jpg")} />
+          <Image
+            style={styles.avatar}
+            source={require('@/assets/img/user.jpg')}
+          />
+
           <View style={styles.identity}>
             <Text style={styles.name}>user</Text>
             <Text style={styles.email}>user@example.com</Text>
@@ -56,20 +83,35 @@ export default function ProfileScreen() {
           {settings.map((item) => (
             <Pressable
               key={item.id}
-              style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
+              onPress={() => navigation.navigate(item.screen)}
+              style={({ pressed }) => [
+                styles.settingCard,
+                pressed && styles.pressed,
+              ]}
             >
               <View style={styles.settingIcon}>
                 <SvgXml xml={item.icon} />
               </View>
-              <Text style={styles.settingLabel}>{item.label}</Text>
+
+              <Text style={styles.settingLabel}>
+                {item.label}
+              </Text>
+
               <SvgXml xml={chevronRightIcon} />
             </Pressable>
           ))}
         </View>
 
-        <Pressable style={({ pressed }) => [styles.logout, pressed && styles.pressed]}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.logout,
+            pressed && styles.pressed,
+          ]}
+        >
           <SvgXml xml={logOutIcon} />
-          <Text style={styles.logoutLabel}>Выйти из аккаунта</Text>
+          <Text style={styles.logoutLabel}>
+            Выйти из аккаунта
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -85,7 +127,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 10,
-    backgroundColor: '#F6FAFC'
+    backgroundColor: '#F6FAFC',
   },
   logo: {
     width: 65,
