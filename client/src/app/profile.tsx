@@ -18,14 +18,20 @@ import {
   logOutIcon,
 } from '@/constants/profile-icons';
 
+import { useNavigation } from 'expo-router';
+import { useAuth } from '@/context/auth';
+
 const settings = [
-  { id: 'personal', label: 'Личные данные', icon: userRoundIcon },
-  { id: 'nutrition', label: 'Настройки питания', icon: saladIcon },
-  { id: 'notifications', label: 'Уведомления', icon: bellIcon },
-  { id: 'support', label: 'Служба поддержки', icon: headphonesIcon },
+  { id: 'personal', label: 'Личные данные', icon: userRoundIcon, screen: 'PersonalData' },
+  { id: 'nutrition', label: 'Настройки питания', icon: saladIcon, screen: 'NutritionSettings' },
+  { id: 'notifications', label: 'Уведомления', icon: bellIcon, screen: 'Notifications' },
+  { id: 'support', label: 'Служба поддержки', icon: headphonesIcon, screen: 'Support' },
 ];
 
-export default function ProfileScreen() {
+export default function ProfileMain() {
+  const navigation = useNavigation<any>();
+  const { user, logout } = useAuth();
+
   let [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
@@ -47,8 +53,8 @@ export default function ProfileScreen() {
         <View style={styles.info}>
           <Image style={styles.avatar} source={require("@/assets/img/user.jpg")} />
           <View style={styles.identity}>
-            <Text style={styles.name}>user</Text>
-            <Text style={styles.email}>user@example.com</Text>
+            <Text style={styles.name}>{user?.displayName ?? 'Пользователь'}</Text>
+            <Text style={styles.email}>{user?.email ?? ''}</Text>
           </View>
         </View>
 
@@ -57,6 +63,7 @@ export default function ProfileScreen() {
             <Pressable
               key={item.id}
               style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
+              onPress={() => navigation.navigate(item.screen)}
             >
               <View style={styles.settingIcon}>
                 <SvgXml xml={item.icon} />
@@ -67,7 +74,10 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <Pressable style={({ pressed }) => [styles.logout, pressed && styles.pressed]}>
+        <Pressable
+          style={({ pressed }) => [styles.logout, pressed && styles.pressed]}
+          onPress={logout}
+        >
           <SvgXml xml={logOutIcon} />
           <Text style={styles.logoutLabel}>Выйти из аккаунта</Text>
         </Pressable>
