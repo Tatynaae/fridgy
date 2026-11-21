@@ -9,6 +9,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { Repository } from 'typeorm';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity.js';
+import { User } from '../database/entities/user.entity.js';
 import { RevokedToken } from '../database/entities/revoked-token.entity.js';
 import { UsersService } from '../users/users.service.js';
 import type { RegisterDto } from './dto/register.dto.js';
@@ -94,6 +95,16 @@ export class AuthService {
         displayName: user.displayName,
       },
     };
+  }
+
+  async getProfile(id: string) {
+    const user = await this.usersService.findById(id);
+
+    if (!user) {
+      throw new UnauthorizedException('Account no longer exists');
+    }
+
+    return { id: user.id, email: user.email, displayName: user.displayName };
   }
 
   async logout(payload: { jti: string; exp: number }) {
@@ -199,9 +210,9 @@ export class AuthService {
       const passwordHash = await argon2.hash(newPassword);
 
       await manager.update(
-        'users',
+        User,
         { id: user.id },
-        { password_hash: passwordHash },
+        { passwordHash },
       );
 
       lockedToken.usedAt = new Date();

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useSession } from '@/auth/session';
 import { View, Text, StyleSheet, StatusBar, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
@@ -26,7 +28,23 @@ const settings = [
 ];
 
 export default function ProfileScreen() {
-  let [fontsLoaded] = useFonts({
+  const { user, signOut } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function logout() {
+    setBusy(true);
+    setError('');
+    try {
+      await signOut();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Не удалось выйти из аккаунта.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
     Manrope_500Medium,
@@ -47,8 +65,8 @@ export default function ProfileScreen() {
         <View style={styles.info}>
           <Image style={styles.avatar} source={require("@/assets/img/user.jpg")} />
           <View style={styles.identity}>
-            <Text style={styles.name}>user</Text>
-            <Text style={styles.email}>user@example.com</Text>
+            <Text style={styles.name}>{user?.displayName || 'Профиль'}</Text>
+            <Text style={styles.email}>{user?.email}</Text>
           </View>
         </View>
 
@@ -67,9 +85,11 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <Pressable style={({ pressed }) => [styles.logout, pressed && styles.pressed]}>
+        {Boolean(error) && <Text accessibilityRole="alert" style={styles.logoutLabel}>{error}</Text>}
+        <Pressable accessibilityRole="button" disabled={busy} onPress={() => void logout()}
+          style={({ pressed }) => [styles.logout, (pressed || busy) && styles.pressed]}>
           <SvgXml xml={logOutIcon} />
-          <Text style={styles.logoutLabel}>Выйти из аккаунта</Text>
+          <Text style={styles.logoutLabel}>{busy ? 'Выходим…' : 'Выйти из аккаунта'}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

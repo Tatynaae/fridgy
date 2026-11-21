@@ -33,7 +33,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar hidden={false}/>
       <View style={styles.container}>
-        <Image style={styles.logo} source={require("../../assets/img/logo.png")}/>
+        <Image style={styles.logo} source={require("@/assets/img/logo.png")}/>
         
         <View style={styles.headerText}>
           <Text style={styles.greeting}>Добрый вечер</Text>
