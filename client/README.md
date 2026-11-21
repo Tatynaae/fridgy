@@ -54,3 +54,14 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+
+## Local authentication
+
+Start the API from `../server` using its [setup instructions](../server/README.md).
+Then run `npm ci` and `npm start` in this directory.
+
+- Android emulator uses `http://10.0.2.2:3000` by default. iOS simulator and web use `http://127.0.0.1:3000`.
+- For a physical phone on the same network, set `EXPO_PUBLIC_API_URL=http://<computer-LAN-IP>:3000` in `.env.local` and restart Expo.
+- iOS and Android persist the access token in SecureStore and verify it against `/auth/me` on launch. The web token lasts until the page reloads.
+- The optional “Запомнить email” setting uses AsyncStorage. The API issues a 15-minute access token. Sign in again once it expires.

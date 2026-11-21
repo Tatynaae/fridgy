@@ -63,10 +63,7 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@Req() request: AuthenticatedRequest) {
-    return {
-      id: request.user.id,
-      email: request.user.email,
-    };
+    return this.authService.getProfile(request.user.id);
   }
 
   @Post('logout')

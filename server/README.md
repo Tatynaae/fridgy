@@ -5,12 +5,17 @@ NestJS API backed by PostgreSQL (Docker) via TypeORM.
 ## Setup
 
 ```bash
-cp .env.example .env        # set DB_PASSWORD
-npm install
+cp .env.example .env        # set DB_PASSWORD, JWT_SECRET and SMTP settings
+npm ci
 npm run db:up               # starts Postgres 18 on 127.0.0.1:5432
 npm run start:dev           # pending migrations run on boot
 curl localhost:3000/health
 ```
+
+Set `FRONTEND_URL` to the Expo web address that should open password reset links.
+The mobile reset screen also accepts a pasted link from the email.
+Set `CORS_ORIGIN` to the exact Expo web origin if it differs from the example.
+Use a local SMTP inbox when testing password reset without sending real email.
 
 ## Schema
 
