@@ -7,8 +7,6 @@ import NutritionSettings from '../screens/profile/NutritionSettings';
 import Notifications from '../screens/profile/Notifications';
 import Support from '../screens/profile/Support';
 
-import ProfileStack from './ProfileStack';
-
 const Stack = createNativeStackNavigator();
 
 export default function ProfileStack() {
@@ -16,8 +14,8 @@ export default function ProfileStack() {
     <Stack.Navigator
       initialRouteName="ProfileMain"
       screenOptions={{
-        headerBackTitle: 'Назад', // подпись у кнопки назад на iOS
-        gestureEnabled: true,     // свайп назад на iOS (в native-stack включён по умолчанию)
+        headerBackTitle: 'Назад', 
+        gestureEnabled: true,    
       }}
     >
       <Stack.Screen
@@ -45,12 +43,7 @@ export default function ProfileStack() {
         component={Support}
         options={{ title: 'Поддержка' }}
       />
-
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack}
-        options={{ headerShown: false }}  // чтобы не было двух хедеров: у вкладки и у стека
-        />
     </Stack.Navigator>
   );
 }
+
