@@ -7,6 +7,8 @@ import { storageRootDir } from './storage/storage.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // CORS нужен только Expo web (в браузере); нативным приложениям он не требуется.
+  if (process.env.NODE_ENV !== 'production') app.enableCors();
   // Раздаём локальные изображения: GET /uploads/scans/... Без листинга папок и dot-файлов
   app.useStaticAssets(storageRootDir(app.get(ConfigService)), {
     prefix: `${UPLOADS_URL_PREFIX}/`,

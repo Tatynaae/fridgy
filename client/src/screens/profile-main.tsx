@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet, StatusBar, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 import type { NativeStackScreenProps } from 'expo-router/native-stack';
 
+import { useAuth } from '@/context/auth-context';
 import type { ProfileStackParamList } from '@/navigation/profile-stack-types';
 import {
   userRoundIcon,
@@ -30,6 +32,14 @@ const settings: SettingItem[] = [
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
 export default function ProfileMainScreen({ navigation }: Props) {
+  const { user, signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    // Отзывает токен на сервере и чистит SecureStore; редирект на вход — через Stack.Protected.
+    await signOut();
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -40,8 +50,8 @@ export default function ProfileMainScreen({ navigation }: Props) {
         <View style={styles.info}>
           <Image style={styles.avatar} source={require("../../assets/img/User.jpg")} />
           <View style={styles.identity}>
-            <Text style={styles.name}>user</Text>
-            <Text style={styles.email}>user@example.com</Text>
+            <Text style={styles.name}>{user?.displayName || user?.email.split('@')[0] || 'user'}</Text>
+            <Text style={styles.email}>{user?.email ?? ''}</Text>
           </View>
         </View>
 
@@ -61,7 +71,11 @@ export default function ProfileMainScreen({ navigation }: Props) {
           ))}
         </View>
 
-        <Pressable style={({ pressed }) => [styles.logout, pressed && styles.pressed]}>
+        <Pressable
+          onPress={handleSignOut}
+          disabled={signingOut}
+          style={({ pressed }) => [styles.logout, (pressed || signingOut) && styles.pressed]}
+        >
           <SvgXml xml={logOutIcon} />
           <Text style={styles.logoutLabel}>Выйти из аккаунта</Text>
         </Pressable>

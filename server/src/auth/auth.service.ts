@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { Repository } from 'typeorm';
+import { User } from '../database/entities/user.entity.js';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity.js';
 import { RevokedToken } from '../database/entities/revoked-token.entity.js';
 import { UsersService } from '../users/users.service.js';
@@ -198,11 +199,7 @@ export class AuthService {
 
       const passwordHash = await argon2.hash(newPassword);
 
-      await manager.update(
-        'users',
-        { id: user.id },
-        { password_hash: passwordHash },
-      );
+      await manager.update(User, { id: user.id }, { passwordHash });
 
       lockedToken.usedAt = new Date();
       await manager.save(PasswordResetToken, lockedToken);
