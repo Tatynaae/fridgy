@@ -1,14 +1,25 @@
-import { View, Text, StyleSheet, StatusBar, Image, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  Image,
+  Pressable,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
+import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import {
   useFonts,
   Manrope_300Light,
   Manrope_400Regular,
   Manrope_500Medium,
   Manrope_600SemiBold,
-  Manrope_700Bold
+  Manrope_700Bold,
 } from '@expo-google-fonts/manrope';
+
 import {
   userRoundIcon,
   saladIcon,
@@ -26,7 +37,9 @@ const settings = [
 ];
 
 export default function ProfileScreen() {
-  let [fontsLoaded] = useFonts({
+  const router = useRouter();
+
+  const [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
     Manrope_500Medium,
@@ -34,18 +47,35 @@ export default function ProfileScreen() {
     Manrope_700Bold,
   });
 
+  async function handleLogout() {
+    try {
+      await SecureStore.deleteItemAsync('accessToken');
+      router.replace('/login');
+    } catch {
+      Alert.alert('Ошибка', 'Не удалось выйти из аккаунта. Попробуй ещё раз.');
+    }
+  }
+
   if (!fontsLoaded) {
     return null;
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar hidden={false}/>
+      <StatusBar hidden={false} />
+
       <View style={styles.container}>
-        <Image style={styles.logo} source={require("@/assets/img/logo.png")}/>
+        <Image
+          style={styles.logo}
+          source={require('@/assets/img/logo.png')}
+        />
 
         <View style={styles.info}>
-          <Image style={styles.avatar} source={require("@/assets/img/user.jpg")} />
+          <Image
+            style={styles.avatar}
+            source={require('@/assets/img/user.jpg')}
+          />
+
           <View style={styles.identity}>
             <Text style={styles.name}>user</Text>
             <Text style={styles.email}>user@example.com</Text>
@@ -56,18 +86,28 @@ export default function ProfileScreen() {
           {settings.map((item) => (
             <Pressable
               key={item.id}
-              style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.settingCard,
+                pressed && styles.pressed,
+              ]}
             >
               <View style={styles.settingIcon}>
                 <SvgXml xml={item.icon} />
               </View>
+
               <Text style={styles.settingLabel}>{item.label}</Text>
               <SvgXml xml={chevronRightIcon} />
             </Pressable>
           ))}
         </View>
 
-        <Pressable style={({ pressed }) => [styles.logout, pressed && styles.pressed]}>
+        <Pressable
+          onPress={handleLogout}
+          style={({ pressed }) => [
+            styles.logout,
+            pressed && styles.pressed,
+          ]}
+        >
           <SvgXml xml={logOutIcon} />
           <Text style={styles.logoutLabel}>Выйти из аккаунта</Text>
         </Pressable>
@@ -85,7 +125,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 10,
-    backgroundColor: '#F6FAFC'
+    backgroundColor: '#F6FAFC',
   },
   logo: {
     width: 65,
