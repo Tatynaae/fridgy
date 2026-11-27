@@ -5,12 +5,32 @@ NestJS API backed by PostgreSQL (Docker) via TypeORM.
 ## Setup
 
 ```bash
-cp .env.example .env        # set DB_PASSWORD
-npm install
+cp .env.example .env        # fill in DB_PASSWORD, JWT_SECRET and SMTP settings
+npm ci
 npm run db:up               # starts Postgres 18 on 127.0.0.1:5432
 npm run start:dev           # pending migrations run on boot
 curl localhost:3000/health
 ```
+
+Run these commands from `server/` with Docker running. Generate a local
+`JWT_SECRET` with `openssl rand -hex 32`. The service requires valid SMTP
+settings at startup and uses them to send password reset links. Set
+`FRONTEND_URL` to the Expo web origin or to the app's base deep link, such as
+`client://`.
+
+For local password reset without a real mailbox, start a local Mailpit
+container:
+
+```bash
+docker run --rm -d --name fridgy-mail \
+  -p 127.0.0.1:1025:1025 -p 127.0.0.1:8025:8025 \
+  -e MP_SMTP_AUTH_ACCEPT_ANY=true -e MP_SMTP_AUTH_ALLOW_INSECURE=true \
+  axllent/mailpit:v1.27.4
+```
+
+Set `SMTP_HOST=127.0.0.1`, `SMTP_PORT=1025`,
+`SMTP_USER=fridgy@example.test`, and `SMTP_PASSWORD=local-test` in
+`server/.env`. View captured email at `http://localhost:8025`.
 
 ## Schema
 

@@ -7,9 +7,11 @@ import {
   Manrope_600SemiBold,
   Manrope_700Bold
 } from '@expo-google-fonts/manrope';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [filter, setFilter] = useState<number>(1);
   
   let [fontsLoaded] = useFonts({
@@ -31,7 +33,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar hidden={false}/>
       <View style={styles.container}>
-        <Image style={styles.logo} source={require("../../assets/img/logo.png")}/>
+        <Image style={styles.logo} source={require("@/assets/img/logo.png")}/>
         
         <View style={styles.headerText}>
           <Text style={styles.greeting}>Добрый вечер</Text>
@@ -50,7 +52,7 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          <Pressable style={styles.button}>
+          <Pressable style={styles.button} onPress={() => router.push('/scan')}>
             <Text style={styles.buttonText}>Сканировать продукты</Text>
           </Pressable>
         </View>
@@ -212,16 +214,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 18
-  }
+  },
   idea: {
-    width: 48%,
-    backgroundColor: #fff,
+    width: '48%',
+    backgroundColor: '#fff',
     padding: 12,
     flexDirection: 'column',
-  }
+  },
   ideaTitle: {
-    color: #0A141A,
-    fonrSize: 13,
+    color: '#0A141A',
+    fontSize: 13,
     fontFamily: 'Manrope_600SemiBold',
   }
 

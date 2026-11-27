@@ -7,8 +7,14 @@ import { storageRootDir } from './storage/storage.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const config = app.get(ConfigService);
+  const frontendUrl = config.get<string>('FRONTEND_URL');
+  if (frontendUrl && /^https?:\/\//i.test(frontendUrl)) {
+    app.enableCors({ origin: new URL(frontendUrl).origin });
+  }
+
   // Раздаём локальные изображения: GET /uploads/scans/... Без листинга папок и dot-файлов
-  app.useStaticAssets(storageRootDir(app.get(ConfigService)), {
+  app.useStaticAssets(storageRootDir(config), {
     prefix: `${UPLOADS_URL_PREFIX}/`,
     index: false,
     dotfiles: 'deny',

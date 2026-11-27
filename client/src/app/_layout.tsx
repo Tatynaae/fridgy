@@ -1,37 +1,56 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 
-import {
-  Manrope_400Regular,
-  Manrope_500Medium,
-  Manrope_600SemiBold,
-  Manrope_700Bold,
-  useFonts,
-} from '@expo-google-fonts/manrope';
-
+import { AuthSessionProvider, useAuthSession } from '@/auth/session';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { AuthButton, AuthError, AuthPage, AuthTitle, authLayout } from '@/components/auth/auth-ui';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [fontsLoaded, fontError] = useFonts({
-    Manrope_400Regular,
-    Manrope_500Medium,
-    Manrope_600SemiBold,
-    Manrope_700Bold,
-  });
-
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
+      <AuthSessionProvider>
+        <SessionNavigator />
+      </AuthSessionProvider>
     </ThemeProvider>
+  );
+}
+
+function SessionNavigator() {
+  const { session, restoring, restoreError, retryRestore } = useAuthSession();
+
+  if (restoring && !restoreError) return null;
+
+  return (
+    <>
+      {restoreError ? (
+        <AuthPage>
+          <AuthTitle>Не удалось проверить сессию</AuthTitle>
+          <View style={authLayout.form}>
+            <AuthError>{restoreError}</AuthError>
+            <AuthButton disabled={restoring} onPress={retryRestore}>
+              {restoring ? 'Проверяем…' : 'Повторить'}
+            </AuthButton>
+          </View>
+        </AuthPage>
+      ) : (
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Protected guard={!session}>
+            <Stack.Screen name="sign-in" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="register" />
+            <Stack.Screen name="forgot-password" />
+            <Stack.Screen name="reset-password" />
+          </Stack.Protected>
+          <Stack.Protected guard={Boolean(session)}>
+            <Stack.Screen name="(tabs)" />
+          </Stack.Protected>
+        </Stack>
+      )}
+      <AnimatedSplashOverlay />
+    </>
   );
 }

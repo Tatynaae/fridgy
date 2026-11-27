@@ -25,6 +25,34 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## Fridgy account screens
+
+The app opens on **Войти** for guests. From there users can create an account
+or request a password reset. After sign-in, use **Профиль → Выйти из аккаунта**
+to sign out.
+
+- Start the API using [the server setup](../server/README.md). In `client/`, run
+  `npm ci` and `npm run ios:native` for an iOS simulator build.
+- The iOS simulator uses `http://localhost:3000`. Android Emulator uses
+  `http://10.0.2.2:3000`. On a physical device, put
+  `EXPO_PUBLIC_API_URL=http://<computer-LAN-IP>:3000` in `client/.env.local`,
+  connect the device to the same network, and restart Expo. Use HTTPS outside
+  local development.
+- For native password reset links, set `FRONTEND_URL=client://` on the server
+  and open the link on a device with the installed native app. For Expo web,
+  set `FRONTEND_URL` to the actual web origin, for example
+  `http://localhost:8081`. Both variants require working SMTP.
+- On iOS and Android the access token is stored in Expo SecureStore. The app
+  validates it through `GET /auth/me` on launch and on returning to the
+  foreground, and every 30 seconds while active. A temporary API failure at
+  launch keeps the token and offers a retry. Token expiry and a rejection from
+  the API both end the session.
+- Signing out deletes the device token immediately and requests server
+  revocation when the API is reachable. Access tokens expire after 15 minutes.
+  Sign in again after expiry. Web sessions are kept in memory until reload.
+- Google, Apple and email verification are unavailable in the current API.
+  Password reset uses an emailed link with a token.
+
 ## Get a fresh project
 
 When you're ready, run:
