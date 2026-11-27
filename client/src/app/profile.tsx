@@ -1,14 +1,26 @@
-import { View, Text, StyleSheet, StatusBar, Image, Pressable } from 'react-native';
+
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  Image,
+  Pressable,
+  Alert,
+} from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
+
 import {
   useFonts,
   Manrope_300Light,
   Manrope_400Regular,
   Manrope_500Medium,
   Manrope_600SemiBold,
-  Manrope_700Bold
+  Manrope_700Bold,
 } from '@expo-google-fonts/manrope';
+
 import {
   userRoundIcon,
   saladIcon,
@@ -18,15 +30,35 @@ import {
   logOutIcon,
 } from '@/constants/profile-icons';
 
+import { useAuth } from '@/context/AuthContext';
+
 const settings = [
-  { id: 'personal', label: 'Личные данные', icon: userRoundIcon },
-  { id: 'nutrition', label: 'Настройки питания', icon: saladIcon },
-  { id: 'notifications', label: 'Уведомления', icon: bellIcon },
-  { id: 'support', label: 'Служба поддержки', icon: headphonesIcon },
+  {
+    id: 'personal',
+    label: 'Личные данные',
+    icon: userRoundIcon,
+  },
+  {
+    id: 'nutrition',
+    label: 'Настройки питания',
+    icon: saladIcon,
+  },
+  {
+    id: 'notifications',
+    label: 'Уведомления',
+    icon: bellIcon,
+  },
+  {
+    id: 'support',
+    label: 'Служба поддержки',
+    icon: headphonesIcon,
+  },
 ];
 
 export default function ProfileScreen() {
-  let [fontsLoaded] = useFonts({
+  const { user, logout } = useAuth();
+
+  const [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
     Manrope_500Medium,
@@ -34,21 +66,61 @@ export default function ProfileScreen() {
     Manrope_700Bold,
   });
 
+  function handleLogout() {
+    Alert.alert(
+      'Выход из аккаунта',
+      'Вы действительно хотите выйти?',
+      [
+        {
+          text: 'Отмена',
+          style: 'cancel',
+        },
+        {
+          text: 'Выйти',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch {
+              Alert.alert(
+                'Ошибка',
+                'Не удалось полностью очистить данные сессии.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  }
+
   if (!fontsLoaded) {
     return null;
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar hidden={false}/>
+      <StatusBar hidden={false} />
+
       <View style={styles.container}>
-        <Image style={styles.logo} source={require("@/assets/img/logo.png")}/>
+        <Image
+          style={styles.logo}
+          source={require('@/assets/img/logo.png')}
+        />
 
         <View style={styles.info}>
-          <Image style={styles.avatar} source={require("@/assets/img/user.jpg")} />
+          <Image
+            style={styles.avatar}
+            source={require('@/assets/img/user.jpg')}
+          />
+
           <View style={styles.identity}>
-            <Text style={styles.name}>user</Text>
-            <Text style={styles.email}>user@example.com</Text>
+            <Text style={styles.name}>
+              {user?.displayName || 'Пользователь'}
+            </Text>
+
+            <Text style={styles.email}>
+              {user?.email || ''}
+            </Text>
           </View>
         </View>
 
@@ -56,20 +128,36 @@ export default function ProfileScreen() {
           {settings.map((item) => (
             <Pressable
               key={item.id}
-              style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.settingCard,
+                pressed && styles.pressed,
+              ]}
             >
               <View style={styles.settingIcon}>
                 <SvgXml xml={item.icon} />
               </View>
-              <Text style={styles.settingLabel}>{item.label}</Text>
+
+              <Text style={styles.settingLabel}>
+                {item.label}
+              </Text>
+
               <SvgXml xml={chevronRightIcon} />
             </Pressable>
           ))}
         </View>
 
-        <Pressable style={({ pressed }) => [styles.logout, pressed && styles.pressed]}>
+        <Pressable
+          onPress={handleLogout}
+          style={({ pressed }) => [
+            styles.logout,
+            pressed && styles.pressed,
+          ]}
+        >
           <SvgXml xml={logOutIcon} />
-          <Text style={styles.logoutLabel}>Выйти из аккаунта</Text>
+
+          <Text style={styles.logoutLabel}>
+            Выйти из аккаунта
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -81,17 +169,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F6FAFC',
   },
+
   container: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 10,
-    backgroundColor: '#F6FAFC'
+    backgroundColor: '#F6FAFC',
   },
+
   logo: {
     width: 65,
     height: 52,
     marginBottom: 7,
   },
+
   info: {
     backgroundColor: '#ffffff',
     borderRadius: 22,
@@ -100,32 +191,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 26,
   },
+
   identity: {
     width: '100%',
     alignItems: 'center',
     gap: 4,
   },
+
   name: {
     fontFamily: 'Manrope_600SemiBold',
     fontSize: 24,
     lineHeight: 29,
     color: '#192C38',
   },
+
   email: {
     fontFamily: 'Manrope_400Regular',
     fontSize: 14,
     lineHeight: 20,
     color: '#7F919F',
   },
+
   settings: {
     marginTop: 48,
     gap: 12,
   },
+
   settingCard: {
     height: 64,
     backgroundColor: '#ffffff',
@@ -135,6 +232,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
+
   settingIcon: {
     width: 36,
     height: 36,
@@ -143,6 +241,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   settingLabel: {
     flex: 1,
     fontFamily: 'Manrope_500Medium',
@@ -150,6 +249,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#192C38',
   },
+
   logout: {
     height: 61,
     marginTop: 26,
@@ -160,12 +260,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 7,
   },
+
   logoutLabel: {
     fontFamily: 'Manrope_600SemiBold',
     fontSize: 15,
     lineHeight: 20,
     color: '#D94C4C',
   },
+
   pressed: {
     opacity: 0.7,
   },
