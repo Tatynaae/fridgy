@@ -10,6 +10,7 @@ import * as argon2 from 'argon2';
 import { Repository } from 'typeorm';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity.js';
 import { RevokedToken } from '../database/entities/revoked-token.entity.js';
+import { User } from '../database/entities/user.entity.js';
 import { UsersService } from '../users/users.service.js';
 import type { RegisterDto } from './dto/register.dto.js';
 import { MailService } from '../mail/mail.service.js';
@@ -211,11 +212,7 @@ export class AuthService {
 
       const passwordHash = await argon2.hash(newPassword);
 
-      await manager.update(
-        'users',
-        { id: user.id },
-        { password_hash: passwordHash },
-      );
+      await manager.update(User, user.id, { passwordHash });
 
       lockedToken.usedAt = new Date();
       await manager.save(PasswordResetToken, lockedToken);
