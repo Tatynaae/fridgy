@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
+import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
 import {
   useFonts,
@@ -47,6 +48,7 @@ export default function ScanScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [phase, setPhase] = useState<ScanPhase>('idle');
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
   let [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -63,6 +65,23 @@ export default function ScanScreen() {
   const openCamera = () => {
     setCameraReady(false);
     setPhase('camera');
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setSelectedImageUri(result.assets[0].uri);
+        setPhase('idle');
+      }
+    } catch {
+      Alert.alert('Не удалось открыть галерею', 'Попробуйте ещё раз');
+    }
   };
 
   const takeScan = async () => {
@@ -154,7 +173,11 @@ export default function ScanScreen() {
 
         <ImageBackground
           style={styles.viewfinder}
-          source={require('@/assets/img/camera-bg.jpg')}
+          source={
+            selectedImageUri
+              ? { uri: selectedImageUri }
+              : require('@/assets/img/camera-bg.jpg')
+          }
           resizeMode="cover"
         >
           {(phase === 'camera' || phase === 'capturing') && (
@@ -214,6 +237,8 @@ export default function ScanScreen() {
           </Pressable>
 
           <Pressable
+            accessibilityRole="button"
+            onPress={pickImage}
             style={({ pressed }) => [
               styles.action,
               styles.upload,
@@ -221,7 +246,14 @@ export default function ScanScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Image style={styles.thumbnail} source={require('@/assets/img/camera-bg.jpg')} />
+            <Image
+              style={styles.thumbnail}
+              source={
+                selectedImageUri
+                  ? { uri: selectedImageUri }
+                  : require('@/assets/img/camera-bg.jpg')
+              }
+            />
             <Text style={[styles.uploadLabel, { color: theme.textPrimary }]}>
               Загрузить из галереи
             </Text>
