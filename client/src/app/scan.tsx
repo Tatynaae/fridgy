@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useRef, useState } from 'react';
@@ -47,6 +48,8 @@ export default function ScanScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [phase, setPhase] = useState<ScanPhase>('idle');
+  // Фото, выбранное из галереи (null, если выбора не было)
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   let [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -61,6 +64,7 @@ export default function ScanScreen() {
   const scanDisabled = phase === 'capturing' || (phase === 'camera' && !cameraReady);
 
   const openCamera = () => {
+    setPhotoUri(null);
     setCameraReady(false);
     setPhase('camera');
   };
@@ -120,6 +124,31 @@ export default function ScanScreen() {
     );
   };
 
+  // Выбор фото из галереи через expo-image-picker
+  const pickFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.7,
+      });
+
+      // Пользователь закрыл галерею, ничего не выбрав
+      if (result.canceled) {
+        return;
+      }
+
+      // The photo isn't sent anywhere yet, recognition will be added later
+      setPhotoUri(result.assets[0].uri);
+      setPhase('success'); // заодно закрывает камеру, если она была открыта
+    } catch (error) {
+      Alert.alert(
+        'Не удалось открыть галерею',
+        error instanceof Error ? error.message : undefined
+      );
+    }
+  };
+
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: theme.screen }]}>
       <StatusBar
@@ -165,6 +194,13 @@ export default function ScanScreen() {
               onCameraReady={() => setCameraReady(true)}
             />
           )}
+          {photoUri && phase === 'success' && (
+            <Image
+              style={StyleSheet.absoluteFill}
+              source={{ uri: photoUri }}
+              resizeMode="cover"
+            />
+          )}
           <LinearGradient
             style={StyleSheet.absoluteFill}
             colors={['rgba(11, 37, 53, 0)', 'rgba(11, 37, 53, 0)', 'rgba(11, 37, 53, 0.65)']}
@@ -175,7 +211,9 @@ export default function ScanScreen() {
               <View style={[styles.successIcon, { backgroundColor: theme.accent }]}>
                 <Ionicons name="checkmark" size={34} color="#FFFFFF" />
               </View>
-              <Text style={styles.successText}>Продукты отсканированы</Text>
+              <Text style={styles.successText}>
+                {photoUri ? 'Фото выбрано' : 'Продукты отсканированы'}
+              </Text>
             </View>
           ) : (
             <View style={styles.instruction}>
@@ -214,6 +252,8 @@ export default function ScanScreen() {
           </Pressable>
 
           <Pressable
+            accessibilityRole="button"
+            onPress={pickFromGallery}
             style={({ pressed }) => [
               styles.action,
               styles.upload,
@@ -221,7 +261,10 @@ export default function ScanScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Image style={styles.thumbnail} source={require('@/assets/img/camera-bg.jpg')} />
+            <Image
+              style={styles.thumbnail}
+              source={photoUri ? { uri: photoUri } : require('@/assets/img/camera-bg.jpg')}
+            />
             <Text style={[styles.uploadLabel, { color: theme.textPrimary }]}>
               Загрузить из галереи
             </Text>
