@@ -10,23 +10,33 @@ export type User = {
   displayName?: string | null;
 };
 
-export type LoginResponse = {
+export type AuthResponse = {
   accessToken: string;
+  refreshToken: string;
   tokenType: 'Bearer';
   user: User;
 };
+
+export type LoginResponse = AuthResponse;
 
 const serverAuthApi = {
   register: (body: { email: string; password: string; displayName?: string }) =>
     request<User>('/auth/register', { method: 'POST', body }),
 
   login: (body: { email: string; password: string }) =>
-    request<LoginResponse>('/auth/login', { method: 'POST', body }),
+    request<AuthResponse>('/auth/login', { method: 'POST', body }),
 
-  me: () => request<{ id: string; email: string }>('/auth/me', { auth: true }),
+  refresh: (refreshToken: string) =>
+    request<AuthResponse>('/auth/refresh', { method: 'POST', body: { refreshToken } }),
 
-  logout: () =>
-    request<{ message: string }>('/auth/logout', { method: 'POST', auth: true }),
+  me: () => request<User>('/auth/me', { auth: true }),
+
+  logout: (refreshToken?: string) =>
+    request<{ message: string }>('/auth/logout', {
+      method: 'POST',
+      auth: true,
+      body: refreshToken ? { refreshToken } : {},
+    }),
 
   forgotPassword: (email: string) =>
     request<{ message: string }>('/auth/forgot-password', {
@@ -42,5 +52,9 @@ const serverAuthApi = {
 };
 
 export const authApi: typeof serverAuthApi = MOCK_AUTH
-  ? { ...mockAuthApi, me: async () => mockAuthApi.me(await getAccessToken()) }
+  ? {
+      ...mockAuthApi,
+      refresh: serverAuthApi.refresh,
+      me: async () => mockAuthApi.me(await getAccessToken()),
+    }
   : serverAuthApi;

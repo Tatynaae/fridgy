@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { humanizeError } from '@/api/errors';
 import { AuthButton } from '@/components/auth/auth-button';
 import { AuthFooterLink } from '@/components/auth/auth-footer-link';
 import { AuthInput } from '@/components/auth/auth-input';
@@ -17,22 +18,35 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [accepted, setAccepted] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  // Ошибки показываем после первой попытки отправки и дальше пересчитываем на каждый ввод,
+  // поэтому красная рамка гаснет, как только поле исправлено
+  const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const hasErrors = Object.values(errors).some(Boolean);
+
+  const validation = {
+    name: validateName(name),
+    email: validateEmail(email),
+    password: validatePassword(password),
+    confirm: confirm !== password ? 'Пароли не совпадают' : undefined,
+    terms: accepted ? undefined : 'Примите условия, чтобы продолжить',
+  };
+  const isValid = !Object.values(validation).some(Boolean);
+  const errors: Partial<typeof validation> = submitted ? validation : {};
+
+  // Обёртка: при любом изменении убираем серверную ошибку
+  const edit =
+    <T,>(setter: (v: T) => void) =>
+    (value: T) => {
+      setter(value);
+      setFormError(null);
+    };
 
   const submit = async () => {
-    const next = {
-      name: validateName(name),
-      email: validateEmail(email),
-      password: validatePassword(password),
-      confirm: confirm !== password ? 'Пароли не совпадают' : undefined,
-      terms: accepted ? undefined : 'Примите условия, чтобы продолжить',
-    };
-    setErrors(next);
+    if (loading) return;
+    setSubmitted(true);
     setFormError(null);
-    if (Object.values(next).some(Boolean)) return;
+    if (!isValid) return;
 
     setLoading(true);
     try {
@@ -42,7 +56,7 @@ export default function RegisterScreen() {
         displayName: name.trim() || undefined,
       });
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Не удалось зарегистрироваться');
+      setFormError(humanizeError(e, 'Не удалось зарегистрироваться'));
     } finally {
       setLoading(false);
     }
@@ -54,16 +68,17 @@ export default function RegisterScreen() {
         icon="person-outline"
         placeholder="Имя"
         value={name}
-        onChangeText={setName}
+        onChangeText={edit(setName)}
         error={errors.name}
         autoCapitalize="words"
         textContentType="name"
+        maxLength={100}
       />
       <AuthInput
         icon="mail-open-outline"
         placeholder="Email"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={edit(setEmail)}
         error={errors.email}
         keyboardType="email-address"
         autoComplete="email"
@@ -73,24 +88,26 @@ export default function RegisterScreen() {
         icon="lock-closed-outline"
         placeholder="Пароль"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={edit(setPassword)}
         error={errors.password}
         password
         textContentType="newPassword"
+        maxLength={128}
       />
       <AuthInput
         icon="lock-closed-outline"
         placeholder="Повторить пароль"
         value={confirm}
-        onChangeText={setConfirm}
+        onChangeText={edit(setConfirm)}
         error={errors.confirm}
         password
         textContentType="newPassword"
+        maxLength={128}
         onSubmitEditing={submit}
       />
       <TermsCheckbox
         checked={accepted}
-        onToggle={() => setAccepted((v) => !v)}
+        onToggle={() => edit(setAccepted)(!accepted)}
         error={errors.terms}
       />
       <FormError message={formError} />
@@ -98,7 +115,7 @@ export default function RegisterScreen() {
         title="Зарегистрироваться"
         onPress={submit}
         loading={loading}
-        disabled={hasErrors}
+        disabled={submitted && !isValid}
       />
       <SocialButtons onPress={(p) => setFormError(`Вход через ${p} скоро появится`)} />
       <AuthFooterLink text="Уже есть аккаунт?" link="Войти" href="/login" />

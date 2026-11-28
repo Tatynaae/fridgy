@@ -2,11 +2,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
 import { authApi } from '@/api/auth';
+import { humanizeError } from '@/api/errors';
 import { AuthButton } from '@/components/auth/auth-button';
 import { AuthInput } from '@/components/auth/auth-input';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { FormError } from '@/components/auth/form-error';
 import { StatusView } from '@/components/auth/status-view';
+import { validatePassword } from '@/lib/validation';
 
 // Открывается по ссылке из письма: <FRONTEND_URL>/reset-password?token=...
 export default function ResetPasswordScreen() {
@@ -14,24 +16,24 @@ export default function ResetPasswordScreen() {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [errors, setErrors] = useState<{ password?: string; confirm?: string }>({});
+  const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Те же правила, что при регистрации (включая «не только пробелы»)
+  const validation = {
+    password: validatePassword(password),
+    confirm: confirm !== password ? 'Пароли не совпадают' : undefined,
+  };
+  const isValid = !validation.password && !validation.confirm;
+  const errors: { password?: string; confirm?: string } = submitted ? validation : {};
+
   const submit = async () => {
-    const next = {
-      password:
-        password.length < 8
-          ? 'Минимум 8 символов'
-          : password.length > 128
-            ? 'Максимум 128 символов'
-            : undefined,
-      confirm: confirm !== password ? 'Пароли не совпадают' : undefined,
-    };
-    setErrors(next);
+    if (loading) return;
+    setSubmitted(true);
     setFormError(null);
-    if (next.password || next.confirm) return;
+    if (!isValid) return;
 
     if (!token) {
       setFormError('Ссылка недействительна. Запросите сброс пароля заново.');
@@ -43,7 +45,7 @@ export default function ResetPasswordScreen() {
       await authApi.resetPassword(token, password);
       setDone(true);
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Не удалось сменить пароль');
+      setFormError(humanizeError(e, 'Не удалось сменить пароль'));
     } finally {
       setLoading(false);
     }
@@ -74,7 +76,7 @@ export default function ResetPasswordScreen() {
             title="Сохранить пароль"
             onPress={submit}
             loading={loading}
-            disabled={!!(errors.password || errors.confirm)}
+            disabled={submitted && !isValid}
           />
         </>
       }
@@ -83,7 +85,10 @@ export default function ResetPasswordScreen() {
         icon="lock-closed-outline"
         placeholder="Новый пароль"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(v) => {
+          setPassword(v);
+          setFormError(null);
+        }}
         error={errors.password}
         password
         textContentType="newPassword"
@@ -92,7 +97,10 @@ export default function ResetPasswordScreen() {
         icon="lock-closed-outline"
         placeholder="Повторить пароль"
         value={confirm}
-        onChangeText={setConfirm}
+        onChangeText={(v) => {
+          setConfirm(v);
+          setFormError(null);
+        }}
         error={errors.confirm}
         password
         textContentType="newPassword"

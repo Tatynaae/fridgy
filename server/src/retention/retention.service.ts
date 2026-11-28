@@ -2,7 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource, In, IsNull, LessThan } from 'typeorm';
-import { Recipe, Scan } from '../database/entities/index.js';
+import {
+  PasswordResetToken,
+  Recipe,
+  RefreshToken,
+  RevokedToken,
+  Scan,
+} from '../database/entities/index.js';
 import { StorageService } from '../storage/storage.service.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -78,6 +84,20 @@ export class RetentionService {
 
     this.logger.log(
       `Purged ${recipeCount} recipes and ${imagePaths.length} scan images older than ${days} days`,
+    );
+  }
+
+  // Просроченные токены больше не нужны: JWT с истёкшим exp и так не пройдёт проверку
+  @Cron(CronExpression.EVERY_HOUR)
+  async purgeExpiredTokens(): Promise<void> {
+    const now = new Date();
+    const [refresh, revoked, reset] = await Promise.all([
+      this.dataSource.getRepository(RefreshToken).delete({ expiresAt: LessThan(now) }),
+      this.dataSource.getRepository(RevokedToken).delete({ expiresAt: LessThan(now) }),
+      this.dataSource.getRepository(PasswordResetToken).delete({ expiresAt: LessThan(now) }),
+    ]);
+    this.logger.log(
+      `Purged expired tokens: ${refresh.affected ?? 0} refresh, ${revoked.affected ?? 0} revoked, ${reset.affected ?? 0} reset`,
     );
   }
 }

@@ -1,5 +1,10 @@
 import { API_URL } from '@/lib/config';
-import { getAccessToken } from '@/lib/token-storage';
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  saveTokens,
+} from '@/lib/token-storage';
 
 export class ApiError extends Error {
   status: number;
@@ -11,12 +16,17 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
+  /** Подставить access-токен и при 401 попробовать обновить его через refresh-токен */
   auth?: boolean;
-  /** Явный токен (например, сразу после логина, пока он ещё не сохранён). */
-  token?: string;
 };
+
+// Вызывается, когда сессию восстановить нельзя (refresh-токен просрочен/отозван)
+let onSessionExpired: (() => void) | null = null;
+export function setSessionExpiredHandler(handler: (() => void) | null) {
+  onSessionExpired = handler;
+}
 
 // Достаёт читаемое сообщение из ответа NestJS ({ message: string | string[], errors?: [...] })
 function extractMessage(data: unknown, fallback: string): string {
@@ -33,16 +43,14 @@ function extractMessage(data: unknown, fallback: string): string {
   return fallback;
 }
 
-export async function request<T>(
+async function rawRequest(
   path: string,
-  { method = 'GET', body, auth = false, token }: RequestOptions = {},
-): Promise<T> {
+  method: string,
+  body: unknown,
+  accessToken: string | null,
+): Promise<{ status: number; ok: boolean; data: unknown }> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-  if (auth || token) {
-    const accessToken = token ?? (await getAccessToken());
-    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-  }
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   let response: Response;
   try {
@@ -62,13 +70,52 @@ export async function request<T>(
   } catch {
     data = null;
   }
+  return { status: response.status, ok: response.ok, data };
+}
 
-  if (!response.ok) {
-    throw new ApiError(
-      extractMessage(data, 'Что-то пошло не так'),
-      response.status,
-    );
+// Один общий запрос на обновление, даже если параллельно упало несколько запросов с 401
+let refreshPromise: Promise<string | null> | null = null;
+
+export function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) return null;
+
+      const res = await rawRequest('/auth/refresh', 'POST', { refreshToken }, null);
+      if (!res.ok) {
+        if (res.status === 401) await clearTokens();
+        return null;
+      }
+      const tokens = res.data as { accessToken: string; refreshToken: string };
+      await saveTokens(tokens);
+      return tokens.accessToken;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+export async function request<T>(
+  path: string,
+  { method = 'GET', body, auth = false }: RequestOptions = {},
+): Promise<T> {
+  let res = await rawRequest(path, method, body, auth ? await getAccessToken() : null);
+
+  // access-токен живёт 15 минут — при 401 обновляем его и повторяем запрос один раз
+  if (auth && res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      res = await rawRequest(path, method, body, newToken);
+    } else if (!(await getRefreshToken())) {
+      onSessionExpired?.();
+    }
   }
 
-  return data as T;
+  if (!res.ok) {
+    throw new ApiError(extractMessage(res.data, 'Что-то пошло не так'), res.status);
+  }
+
+  return res.data as T;
 }

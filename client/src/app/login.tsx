@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
+import { humanizeError } from '@/api/errors';
 import { AuthButton } from '@/components/auth/auth-button';
 import { AuthFooterLink } from '@/components/auth/auth-footer-link';
 import { AuthInput } from '@/components/auth/auth-input';
@@ -15,26 +16,29 @@ export default function LoginScreen() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const hasErrors = !!(errors.email || errors.password);
+
+  const validation = {
+    email: validateEmail(email),
+    password: password ? undefined : 'Введите пароль',
+  };
+  const isValid = !validation.email && !validation.password;
+  const errors: Partial<typeof validation> = submitted ? validation : {};
 
   const submit = async () => {
-    const next = {
-      email: validateEmail(email),
-      password: password ? undefined : 'Введите пароль',
-    };
-    setErrors(next);
+    if (loading) return;
+    setSubmitted(true);
     setFormError(null);
-    if (next.email || next.password) return;
+    if (!isValid) return;
 
     setLoading(true);
     try {
       await signIn(email.trim().toLowerCase(), password);
       // редирект на главную делает AuthGate в _layout
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Не удалось войти');
+      setFormError(humanizeError(e, 'Не удалось войти'));
     } finally {
       setLoading(false);
     }
@@ -49,7 +53,10 @@ export default function LoginScreen() {
         icon="mail-open-outline"
         placeholder="Email"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(v) => {
+          setEmail(v);
+          setFormError(null);
+        }}
         error={errors.email}
         keyboardType="email-address"
         autoComplete="email"
@@ -59,18 +66,27 @@ export default function LoginScreen() {
         icon="lock-closed-outline"
         placeholder="Пароль"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(v) => {
+          setPassword(v);
+          setFormError(null);
+        }}
         error={errors.password}
         password
         autoComplete="current-password"
         textContentType="password"
+        maxLength={128}
         onSubmitEditing={submit}
       />
       <Link href="/forgot-password" style={styles.forgot}>
         Забыли пароль?
       </Link>
       <FormError message={formError} />
-      <AuthButton title="Войти" onPress={submit} loading={loading} disabled={hasErrors} />
+      <AuthButton
+        title="Войти"
+        onPress={submit}
+        loading={loading}
+        disabled={submitted && !isValid}
+      />
       <SocialButtons onPress={(p) => setFormError(`Вход через ${p} скоро появится`)} />
       <AuthFooterLink text="Нет аккаунта?" link="Зарегистрироваться" href="/register" />
     </AuthLayout>

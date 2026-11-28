@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useRef, useState } from 'react';
@@ -35,10 +36,14 @@ function getPluginOption(plugin: string, option: string): string | undefined {
   return Array.isArray(entry) ? entry[1]?.[option] : undefined;
 }
 
-type ScanPhase = 'idle' | 'camera' | 'capturing' | 'success';
+type ScanPhase = 'idle' | 'camera' | 'capturing' | 'picking' | 'success';
 
 const CAMERA_PERMISSION_TEXT =
   getPluginOption('expo-camera', 'cameraPermission') ?? 'Камера нужна, чтобы сканировать продукты';
+
+const PHOTOS_PERMISSION_TEXT =
+  getPluginOption('expo-image-picker', 'photosPermission') ??
+  'Доступ к галерее нужен, чтобы выбрать фото';
 
 export default function ScanScreen() {
   const theme = useTheme();
@@ -47,6 +52,8 @@ export default function ScanScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [phase, setPhase] = useState<ScanPhase>('idle');
+  // Последнее фото (с камеры или из галереи). Пока никуда не отправляется — распознавание добавим позже
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   let [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -58,9 +65,11 @@ export default function ScanScreen() {
     return null;
   }
 
-  const scanDisabled = phase === 'capturing' || (phase === 'camera' && !cameraReady);
+  const busy = phase === 'capturing' || phase === 'picking';
+  const scanDisabled = busy || (phase === 'camera' && !cameraReady);
 
   const openCamera = () => {
+    setPhotoUri(null);
     setCameraReady(false);
     setPhase('camera');
   };
@@ -73,7 +82,8 @@ export default function ScanScreen() {
     setPhase('capturing');
     try {
       // The photo isn't sent anywhere yet, recognition will be added later
-      await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      setPhotoUri(photo?.uri ?? null);
       setPhase('success');
     } catch {
       setPhase('camera');
@@ -120,6 +130,55 @@ export default function ScanScreen() {
     );
   };
 
+  const pickFromGallery = async () => {
+    if (busy) return;
+    const previousPhase = phase;
+    setPhase('picking');
+
+    try {
+      // На iOS 14+ и Android 13+ системный пикер работает и без разрешения,
+      // но на старых версиях оно нужно — диалог покажет photosPermission из app.json
+      const permission = await ImagePicker.getMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        const { granted, canAskAgain } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!granted) {
+          setPhase(previousPhase);
+          Alert.alert(
+            'Нет доступа к галерее',
+            PHOTOS_PERMISSION_TEXT,
+            canAskAgain
+              ? [{ text: 'OK' }]
+              : [
+                  { text: 'Отмена', style: 'cancel' },
+                  { text: 'Открыть настройки', onPress: () => Linking.openSettings() },
+                ]
+          );
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 0.7,
+      });
+
+      if (result.canceled || !result.assets?.[0]) {
+        setPhase(previousPhase);
+        return;
+      }
+
+      setPhotoUri(result.assets[0].uri);
+      setPhase('success');
+    } catch (error) {
+      setPhase(previousPhase);
+      Alert.alert(
+        'Не удалось открыть галерею',
+        error instanceof Error ? error.message : 'Попробуйте ещё раз'
+      );
+    }
+  };
+
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: theme.screen }]}>
       <StatusBar
@@ -163,6 +222,14 @@ export default function ScanScreen() {
               style={StyleSheet.absoluteFill}
               facing="back"
               onCameraReady={() => setCameraReady(true)}
+            />
+          )}
+          {phase === 'success' && photoUri && (
+            <Image
+              style={StyleSheet.absoluteFill}
+              source={{ uri: photoUri }}
+              resizeMode="cover"
+              accessibilityLabel="Выбранное фото"
             />
           )}
           <LinearGradient
@@ -214,14 +281,27 @@ export default function ScanScreen() {
           </Pressable>
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Загрузить из галереи"
+            onPress={pickFromGallery}
+            disabled={busy}
             style={({ pressed }) => [
               styles.action,
               styles.upload,
               { backgroundColor: theme.card, borderColor: theme.cardBorder },
-              pressed && styles.pressed,
+              (pressed || busy) && styles.pressed,
             ]}
           >
-            <Image style={styles.thumbnail} source={require('@/assets/img/camera-bg.jpg')} />
+            {phase === 'picking' ? (
+              <View style={styles.thumbnail}>
+                <ActivityIndicator color={theme.accent} />
+              </View>
+            ) : (
+              <Image
+                style={styles.thumbnail}
+                source={photoUri ? { uri: photoUri } : require('@/assets/img/camera-bg.jpg')}
+              />
+            )}
             <Text style={[styles.uploadLabel, { color: theme.textPrimary }]}>
               Загрузить из галереи
             </Text>
@@ -345,6 +425,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scanLabel: {
     fontFamily: 'Manrope_600SemiBold',

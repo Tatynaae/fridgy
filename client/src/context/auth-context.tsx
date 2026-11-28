@@ -9,11 +9,12 @@ import {
 } from 'react';
 
 import { authApi, type User } from '@/api/auth';
-import { ApiError } from '@/api/client';
+import { ApiError, setSessionExpiredHandler } from '@/api/client';
 import {
-  clearAccessToken,
+  clearTokens,
   getAccessToken,
-  saveAccessToken,
+  getRefreshToken,
+  saveTokens,
 } from '@/lib/token-storage';
 
 type AuthContextValue = {
@@ -35,18 +36,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // При старте: берём токен из secure storage и проверяем его через /auth/me
+  // Если refresh-токен протух посреди работы — выкидываем на экран входа
+  useEffect(() => {
+    setSessionExpiredHandler(() => setUser(null));
+    return () => setSessionExpiredHandler(null);
+  }, []);
+
+  // При старте: берём токены из secure storage и проверяем сессию через /auth/me
+  // (если access-токен истёк, api/client сам обновит его по refresh-токену)
   useEffect(() => {
     (async () => {
       try {
-        const token = await getAccessToken();
-        if (!token) return;
+        const [access, refresh] = await Promise.all([getAccessToken(), getRefreshToken()]);
+        if (!access && !refresh) return;
         const me = await authApi.me();
-        setUser({ id: me.id, email: me.email });
+        setUser({ id: me.id, email: me.email, displayName: me.displayName });
       } catch (error) {
-        // Токен просрочен/отозван — удаляем. При ошибке сети токен оставляем.
+        // Сессия недействительна — удаляем токены. При ошибке сети оставляем.
         if (error instanceof ApiError && error.status === 401) {
-          await clearAccessToken();
+          await clearTokens();
         }
       } finally {
         setLoading(false);
@@ -56,7 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const result = await authApi.login({ email, password });
-    await saveAccessToken(result.accessToken);
+    await saveTokens({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
     setUser(result.user);
   }, []);
 
@@ -71,11 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      await authApi.logout();
+      // Сервер отзывает и access-, и refresh-токен
+      await authApi.logout((await getRefreshToken()) ?? undefined);
     } catch {
       // даже если сервер недоступен, локально выходим
     }
-    await clearAccessToken();
+    await clearTokens();
     setUser(null);
   }, []);
 
