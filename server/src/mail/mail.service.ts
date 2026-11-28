@@ -6,7 +6,8 @@ import nodemailer, { type Transporter } from 'nodemailer';
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly transporter: Transporter;
+  // null — SMTP не настроен: письма не отправляются, ссылка пишется в лог (удобно для локальной разработки)
+  private readonly transporter: Transporter | null;
 
   constructor(private readonly config: ConfigService) {
     const host = this.config.get<string>('SMTP_HOST');
@@ -15,7 +16,11 @@ export class MailService {
     const password = this.config.get<string>('SMTP_PASSWORD');
 
     if (!host || !user || !password) {
-      throw new Error('SMTP_HOST, SMTP_USER and SMTP_PASSWORD must be configured');
+      this.transporter = null;
+      this.logger.warn(
+        'SMTP is not configured — password reset links will be printed to the log instead of emailed',
+      );
+      return;
     }
 
     this.transporter = nodemailer.createTransport({
@@ -28,11 +33,17 @@ export class MailService {
 
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
     const frontendUrl = this.config
-      .get<string>('FRONTEND_URL', 'http://localhost:5173')
+      .get<string>('FRONTEND_URL', 'http://localhost:8081')
       .replace(/\/+$/, '');
 
     const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
-    const from = this.config.get<string>('SMTP_USER');
+    if (!this.transporter) {
+      this.logger.log(`[dev] Password reset for ${email}: ${resetUrl}`);
+      this.logger.log(`[dev] Reset token: ${token}`);
+      return;
+    }
+
+    const from = this.config.get<string>('SMTP_FROM') ?? this.config.get<string>('SMTP_USER');
 
     await this.transporter.sendMail({
       from,
@@ -57,6 +68,7 @@ export class MailService {
   }
 
   async verifyConnection(): Promise<void> {
+    if (!this.transporter) return;
     await this.transporter.verify();
     this.logger.log('SMTP connection verified');
   }

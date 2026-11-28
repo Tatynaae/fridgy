@@ -11,7 +11,6 @@ import { RetentionModule } from './retention/retention.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
-import { MailService } from './mail/mail.service.js';
 import { MailModule } from './mail/mail.module.js';
 
 @Module({
@@ -33,6 +32,6 @@ import { MailModule } from './mail/mail.module.js';
     MailModule,
   ],
   controllers: [AppController],
-  providers: [AppService, MailService],
+  providers: [AppService],
 })
 export class AppModule {}

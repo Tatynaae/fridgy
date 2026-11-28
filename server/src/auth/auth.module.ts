@@ -14,6 +14,7 @@ import {
   PasswordResetToken,
 } from '../database/entities/password-reset-token.entity.js';
 import { RevokedToken } from '../database/entities/revoked-token.entity.js';
+import { RefreshToken } from '../database/entities/refresh-token.entity.js';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { RevokedToken } from '../database/entities/revoked-token.entity.js';
     TypeOrmModule.forFeature([
       RevokedToken,
       PasswordResetToken,
+      RefreshToken,
     ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -35,7 +37,7 @@ import { RevokedToken } from '../database/entities/revoked-token.entity.js';
         return {
           secret,
           signOptions: {
-            expiresIn: '15m',
+            expiresIn: config.get('JWT_ACCESS_EXPIRES_IN', '15m'),
           },
         };
       },
