@@ -61,7 +61,7 @@ export default function ProfileMain() {
           {settings.map((item) => (
             <Pressable
               key={item.id}
-              onPress={() => router.navigate(item.href)}
+onPress={() => router.navigate(item.href)}
               style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
             >
               <View style={styles.settingIcon}>

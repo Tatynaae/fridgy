@@ -1,8 +1,6 @@
 import { Stack } from 'expo-router';
 
 // Stack Navigator вкладки Profile.
-// Назад: кнопка в хедере (все платформы), системная кнопка «Назад» на Android,
-// свайп от левого края на iOS (gestureEnabled).
 export default function ProfileLayout() {
   return (
     <Stack

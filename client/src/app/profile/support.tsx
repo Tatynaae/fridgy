@@ -1,3 +1,4 @@
+
 import { ProfileDetail } from '@/components/profile-detail';
 
 export default function Support() {
