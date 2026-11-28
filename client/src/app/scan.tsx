@@ -17,6 +17,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import {
   useFonts,
   Manrope_400Regular,
@@ -41,6 +42,7 @@ const CAMERA_PERMISSION_TEXT =
   getPluginOption('expo-camera', 'cameraPermission') ?? 'Камера нужна, чтобы сканировать продукты';
 
 export default function ScanScreen() {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const theme = useTheme();
   const scheme = useColorScheme();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -62,8 +64,22 @@ export default function ScanScreen() {
 
   const openCamera = () => {
     setCameraReady(false);
+    setSelectedImage(null);
     setPhase('camera');
   };
+
+  const pickImage = async () => {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    quality: 1,
+  });
+
+  if (!result.canceled) {
+    setSelectedImage(result.assets[0].uri);
+    setPhase('idle');
+  }
+};
 
   const takeScan = async () => {
     if (!cameraRef.current || !cameraReady) {
@@ -154,7 +170,11 @@ export default function ScanScreen() {
 
         <ImageBackground
           style={styles.viewfinder}
-          source={require('@/assets/img/camera-bg.jpg')}
+          source={
+              selectedImage
+                ? { uri: selectedImage }
+                : require('@/assets/img/camera-bg.jpg')
+            }
           resizeMode="cover"
         >
           {(phase === 'camera' || phase === 'capturing') && (
@@ -171,17 +191,21 @@ export default function ScanScreen() {
             locations={[0, 0.6, 1]}
           />
           {phase === 'success' ? (
-            <View style={styles.success}>
-              <View style={[styles.successIcon, { backgroundColor: theme.accent }]}>
-                <Ionicons name="checkmark" size={34} color="#FFFFFF" />
+              <View style={styles.success}>
+                <View style={[styles.successIcon, { backgroundColor: theme.accent }]}>
+                  <Ionicons name="checkmark" size={34} color="#FFFFFF" />
+                </View>
+                <Text style={styles.successText}>Продукты отсканированы</Text>
               </View>
-              <Text style={styles.successText}>Продукты отсканированы</Text>
-            </View>
-          ) : (
-            <View style={styles.instruction}>
-              <Text style={styles.instructionText}>Поместите продукты в кадр</Text>
-            </View>
-          )}
+            ) : selectedImage ? (
+              <View style={styles.instruction}>
+                <Text style={styles.instructionText}>Фото выбрано</Text>
+              </View>
+            ) : (
+              <View style={styles.instruction}>
+                <Text style={styles.instructionText}>Поместите продукты в кадр</Text>
+              </View>
+            )}
         </ImageBackground>
 
         <View style={styles.actions}>
@@ -214,6 +238,7 @@ export default function ScanScreen() {
           </Pressable>
 
           <Pressable
+          onPress={pickImage}
             style={({ pressed }) => [
               styles.action,
               styles.upload,

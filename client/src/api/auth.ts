@@ -1,3 +1,7 @@
+import { MOCK_AUTH } from '@/lib/config';
+import { getAccessToken } from '@/lib/token-storage';
+
+import { mockAuthApi } from './auth.mock';
 import { request } from './client';
 
 export type User = {
@@ -12,7 +16,7 @@ export type LoginResponse = {
   user: User;
 };
 
-export const authApi = {
+const serverAuthApi = {
   register: (body: { email: string; password: string; displayName?: string }) =>
     request<User>('/auth/register', { method: 'POST', body }),
 
@@ -36,3 +40,7 @@ export const authApi = {
       body: { token, newPassword },
     }),
 };
+
+export const authApi: typeof serverAuthApi = MOCK_AUTH
+  ? { ...mockAuthApi, me: async () => mockAuthApi.me(await getAccessToken()) }
+  : serverAuthApi;
