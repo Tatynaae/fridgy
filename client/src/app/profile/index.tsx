@@ -1,3 +1,4 @@
+import { useRouter, type Href } from 'expo-router';
 import { View, Text, StyleSheet, StatusBar, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
@@ -9,6 +10,7 @@ import {
   Manrope_600SemiBold,
   Manrope_700Bold
 } from '@expo-google-fonts/manrope';
+import { useAuth } from '@/context/auth-context';
 import {
   userRoundIcon,
   saladIcon,
@@ -17,17 +19,18 @@ import {
   chevronRightIcon,
   logOutIcon,
 } from '@/constants/profile-icons';
-import { useNavigation } from 'expo-router';
 
-const settings = [
-  { id: 'personal', label: 'Личные данные', icon: userRoundIcon },
-  { id: 'nutrition', label: 'Настройки питания', icon: saladIcon },
-  { id: 'notifications', label: 'Уведомления', icon: bellIcon },
-  { id: 'support', label: 'Служба поддержки', icon: headphonesIcon },
+// Экраны стека: PersonalData, NutritionSettings, Notifications, Support
+const settings: { id: string; label: string; icon: string; href: Href }[] = [
+  { id: 'personal', label: 'Личные данные', icon: userRoundIcon, href: '/profile/personal-data' },
+  { id: 'nutrition', label: 'Настройки питания', icon: saladIcon, href: '/profile/nutrition-settings' },
+  { id: 'notifications', label: 'Уведомления', icon: bellIcon, href: '/profile/notifications' },
+  { id: 'support', label: 'Служба поддержки', icon: headphonesIcon, href: '/profile/support' },
 ];
 
-export default function ProfileScreen() {
-  const navigation = useNavigation();
+export default function ProfileMain() {
+  const router = useRouter();
+  const { user, signOut } = useAuth();
   let [fontsLoaded] = useFonts({
     Manrope_300Light,
     Manrope_400Regular,
@@ -49,8 +52,8 @@ export default function ProfileScreen() {
         <View style={styles.info}>
           <Image style={styles.avatar} source={require("@/assets/img/user.jpg")} />
           <View style={styles.identity}>
-            <Text style={styles.name}>user</Text>
-            <Text style={styles.email}>user@example.com</Text>
+            <Text style={styles.name}>{user?.displayName || user?.email?.split('@')[0] || 'user'}</Text>
+            <Text style={styles.email}>{user?.email ?? ''}</Text>
           </View>
         </View>
 
@@ -58,7 +61,7 @@ export default function ProfileScreen() {
           {settings.map((item) => (
             <Pressable
               key={item.id}
-              onPress={() => navigation.navigate(item.id as never)}
+onPress={() => router.navigate(item.href)}
               style={({ pressed }) => [styles.settingCard, pressed && styles.pressed]}
             >
               <View style={styles.settingIcon}>
@@ -70,7 +73,10 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <Pressable style={({ pressed }) => [styles.logout, pressed && styles.pressed]}>
+        <Pressable
+          onPress={signOut}
+          style={({ pressed }) => [styles.logout, pressed && styles.pressed]}
+        >
           <SvgXml xml={logOutIcon} />
           <Text style={styles.logoutLabel}>Выйти из аккаунта</Text>
         </Pressable>

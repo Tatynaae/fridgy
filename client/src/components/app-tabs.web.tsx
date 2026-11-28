@@ -32,17 +32,30 @@ export default function AppTabs() {
           <TabTrigger name="profile" href="/profile" asChild>
             <TabButton>Профиль</TabButton>
           </TabTrigger>
+
+          {/* Auth screens: hidden triggers, only declare the routes */}
+          {["login", "register", "forgot-password", "reset-password"].map((name) => (
+            <TabTrigger
+              key={name}
+              name={name}
+              href={`/${name}` as never}
+              style={{ display: "none" }}
+            />
+          ))}
         </CustomTabList>
       </TabList>
     </Tabs>
   );
 }
 
+type TabButtonProps = Omit<TabTriggerSlotProps, "ref"> &
+  Pick<React.ComponentProps<typeof Pressable>, "ref">;
+
 export function TabButton({
   children,
   isFocused,
   ...props
-}: TabTriggerSlotProps) {
+}: TabButtonProps) {
   return (
     <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
       <ThemedView
@@ -62,7 +75,7 @@ export function TabButton({
 
 export function CustomTabList(props: TabListProps) {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme === "dark" ? "dark" : "light"];
 
   return (
     <View {...props} style={styles.tabListContainer}>
