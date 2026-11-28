@@ -11,6 +11,8 @@ import { AuthProvider, useAuth } from '@/context/auth-context';
 SplashScreen.preventAutoHideAsync();
 
 const AUTH_ROUTES = ['login', 'register', 'forgot-password', 'reset-password'];
+// Сюда можно попасть и авторизованным — по ссылке из письма
+const PUBLIC_ROUTES = ['reset-password'];
 
 // Не авторизован -> /login, авторизован на экране входа -> главная
 function AuthGate({ children }: { children: ReactNode }) {
@@ -18,12 +20,13 @@ function AuthGate({ children }: { children: ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
   const inAuth = AUTH_ROUTES.includes(segments[0] ?? '');
+  const isPublic = PUBLIC_ROUTES.includes(segments[0] ?? '');
 
   useEffect(() => {
     if (loading) return;
     if (!user && !inAuth) router.replace('/login');
-    else if (user && inAuth) router.replace('/');
-  }, [user, loading, inAuth, router]);
+    else if (user && inAuth && !isPublic) router.replace('/');
+  }, [user, loading, inAuth, isPublic, router]);
 
   return <>{children}</>;
 }

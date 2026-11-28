@@ -29,6 +29,7 @@ export const mockAuthApi = {
     await delay();
     return {
       accessToken: `${TOKEN_PREFIX}${body.email}`,
+      refreshToken: 'mock.refresh',
       tokenType: 'Bearer',
       user: mockUser(body.email),
     };

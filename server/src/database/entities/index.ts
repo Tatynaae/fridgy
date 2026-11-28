@@ -8,6 +8,7 @@ import { Scan } from './scan.entity.js';
 import { Suggestion } from './suggestion.entity.js';
 import { User } from './user.entity.js';
 import { PasswordResetToken } from './password-reset-token.entity.js';
+import { RefreshToken } from './refresh-token.entity.js';
 
 export {
   Favorite,
@@ -19,6 +20,7 @@ export {
   Suggestion,
   User,
   PasswordResetToken,
+  RefreshToken,
 };
 
 export { RecipeDifficulty, RecipeSource } from './recipe.entity.js';
@@ -34,4 +36,5 @@ export const entities = [
   Suggestion,
   RevokedToken,
   PasswordResetToken,
+  RefreshToken,
 ];

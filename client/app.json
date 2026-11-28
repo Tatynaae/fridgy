@@ -51,7 +51,8 @@
         {
           "photosPermission": "Доступ к галерее нужен, чтобы выбрать фото"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

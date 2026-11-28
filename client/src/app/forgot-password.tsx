@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { authApi } from '@/api/auth';
+import { humanizeError } from '@/api/errors';
 import { AuthButton } from '@/components/auth/auth-button';
 import { AuthFooterLink } from '@/components/auth/auth-footer-link';
 import { AuthInput } from '@/components/auth/auth-input';
@@ -11,23 +12,26 @@ import { validateEmail } from '@/lib/validation';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState<string>();
+  const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const validationError = validateEmail(email);
+  const emailError = submitted ? validationError : undefined;
+
   const submit = async () => {
-    const error = validateEmail(email);
-    setEmailError(error);
+    if (loading) return;
+    setSubmitted(true);
     setFormError(null);
-    if (error) return;
+    if (validationError) return;
 
     setLoading(true);
     try {
       await authApi.forgotPassword(email.trim().toLowerCase());
       setSent(true);
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Не удалось отправить письмо');
+      setFormError(humanizeError(e, 'Не удалось отправить письмо'));
     } finally {
       setLoading(false);
     }
@@ -72,7 +76,10 @@ export default function ForgotPasswordScreen() {
         icon="mail-open-outline"
         placeholder="Email"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(v) => {
+          setEmail(v);
+          setFormError(null);
+        }}
         error={emailError}
         keyboardType="email-address"
         autoComplete="email"

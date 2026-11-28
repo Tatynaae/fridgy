@@ -3,18 +3,32 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity.js';
+import { RefreshToken } from '../database/entities/refresh-token.entity.js';
+import type { User } from '../database/entities/user.entity.js';
 import { RevokedToken } from '../database/entities/revoked-token.entity.js';
 import { UsersService } from '../users/users.service.js';
 import type { RegisterDto } from './dto/register.dto.js';
 import { MailService } from '../mail/mail.service.js';
 
 const RESET_TOKEN_TTL_MS = 15 * 60 * 1000;
+const DEFAULT_REFRESH_TOKEN_TTL_DAYS = 30;
+
+export type AuthTokensResponse = {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: 'Bearer';
+  user: { id: string; email: string; displayName: string | null };
+};
+
+const hashToken = (token: string) =>
+  createHash('sha256').update(token).digest('hex');
 
 @Injectable()
 export class AuthService {
@@ -28,7 +42,52 @@ export class AuthService {
 
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokens: Repository<PasswordResetToken>,
+
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokens: Repository<RefreshToken>,
+
+    private readonly config: ConfigService,
   ) {}
+
+  private get refreshTokenTtlMs(): number {
+    const days = Number(
+      this.config.get('REFRESH_TOKEN_TTL_DAYS', DEFAULT_REFRESH_TOKEN_TTL_DAYS),
+    );
+    return (days > 0 ? days : DEFAULT_REFRESH_TOKEN_TTL_DAYS) * 24 * 60 * 60 * 1000;
+  }
+
+  // Выдаёт пару: короткий JWT access-токен + длинный случайный refresh-токен.
+  private async issueTokens(
+    user: Pick<User, 'id' | 'email' | 'displayName'>,
+  ): Promise<AuthTokensResponse> {
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id,
+      email: user.email,
+      jti: randomUUID(),
+    });
+
+    const refreshToken = randomBytes(48).toString('base64url');
+
+    await this.refreshTokens.save(
+      this.refreshTokens.create({
+        userId: user.id,
+        tokenHash: hashToken(refreshToken),
+        expiresAt: new Date(Date.now() + this.refreshTokenTtlMs),
+        revokedAt: null,
+      }),
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      tokenType: 'Bearer',
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+      },
+    };
+  }
 
   async register(dto: RegisterDto) {
     const existingUser = await this.usersService.findByEmail(dto.email);
@@ -79,24 +138,76 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const accessToken = await this.jwtService.signAsync({
-      sub: user.id,
-      email: user.email,
-      jti: randomUUID(),
+    return this.issueTokens(user);
+  }
+
+  // Ротация: старый refresh-токен отзывается, выдаётся новая пара.
+  async refresh(rawRefreshToken: string) {
+    const record = await this.refreshTokens.findOne({
+      where: { tokenHash: hashToken(rawRefreshToken) },
     });
 
+    if (!record || record.expiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (record.revokedAt) {
+      // Повторное использование отозванного токена — возможна кража: отзываем все сессии пользователя.
+      await this.revokeAllRefreshTokens(record.userId);
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.usersService.findById(record.userId);
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const result = await this.refreshTokens.update(
+      { id: record.id, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+    if (!result.affected) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    return this.issueTokens(user);
+  }
+
+  async me(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
     return {
-      accessToken,
-      tokenType: 'Bearer',
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-      },
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      createdAt: user.createdAt,
     };
   }
 
-  async logout(payload: { jti: string; exp: number }) {
+  private async revokeAllRefreshTokens(userId: string) {
+    await this.refreshTokens.update(
+      { userId, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+  }
+
+  async logout(
+    payload: { jti: string; exp: number; userId: string },
+    refreshToken?: string,
+  ) {
+    if (refreshToken) {
+      await this.refreshTokens.update(
+        {
+          tokenHash: hashToken(refreshToken),
+          userId: payload.userId,
+          revokedAt: IsNull(),
+        },
+        { revokedAt: new Date() },
+      );
+    }
+
     if (!payload.jti || !payload.exp) {
       throw new UnauthorizedException('Invalid access token');
     }
@@ -129,7 +240,7 @@ export class AuthService {
     if (user) {
       const rawToken = randomBytes(32).toString('hex');
 
-      const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+      const tokenHash = hashToken(rawToken);
 
       await this.passwordResetTokens.delete({
         userId: user.id,
@@ -144,7 +255,6 @@ export class AuthService {
         }),
       );
 
-      
       await this.mailService.sendPasswordResetEmail(user.email, rawToken);
     }
 
@@ -155,7 +265,7 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const tokenHash = hashToken(token);
 
     const resetRecord = await this.passwordResetTokens.findOne({
       where: { tokenHash },
@@ -206,6 +316,13 @@ export class AuthService {
 
       lockedToken.usedAt = new Date();
       await manager.save(PasswordResetToken, lockedToken);
+
+      // После смены пароля выходим со всех устройств
+      await manager.update(
+        RefreshToken,
+        { userId: user.id, revokedAt: IsNull() },
+        { revokedAt: new Date() },
+      );
     });
 
     return { message: 'Password has been reset successfully' };
