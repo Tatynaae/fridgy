@@ -9,11 +9,13 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useRef, useState } from 'react';
@@ -35,10 +37,12 @@ function getPluginOption(plugin: string, option: string): string | undefined {
   return Array.isArray(entry) ? entry[1]?.[option] : undefined;
 }
 
-type ScanPhase = 'idle' | 'camera' | 'capturing' | 'success';
+type ScanPhase = 'idle' | 'camera' | 'capturing' | 'success' | 'preview';
 
 const CAMERA_PERMISSION_TEXT =
   getPluginOption('expo-camera', 'cameraPermission') ?? 'Камера нужна, чтобы сканировать продукты';
+const GALLERY_PERMISSION_TEXT =
+  getPluginOption('expo-image-picker', 'photosPermission') ?? 'Доступ к галерее нужен, чтобы выбрать фото';
 
 export default function ScanScreen() {
   const theme = useTheme();
@@ -47,6 +51,10 @@ export default function ScanScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [phase, setPhase] = useState<ScanPhase>('idle');
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [isPicking, setIsPicking] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const pickerBusy = useRef(false);
 
   let [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -58,7 +66,58 @@ export default function ScanScreen() {
     return null;
   }
 
-  const scanDisabled = phase === 'capturing' || (phase === 'camera' && !cameraReady);
+  const scanDisabled = isPicking || phase === 'capturing' || (phase === 'camera' && !cameraReady);
+  const galleryDisabled = isPicking || phase === 'capturing';
+
+  const pickGalleryPhoto = async () => {
+    if (pickerBusy.current || phase === 'capturing') return;
+    pickerBusy.current = true;
+    setIsPicking(true);
+    setGalleryError(null);
+
+    try {
+      // On web the picker must open directly from the user's button press.
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert(
+            'Нет доступа к галерее',
+            GALLERY_PERMISSION_TEXT,
+            permission.canAskAgain
+              ? [{ text: 'OK' }]
+              : [
+                  { text: 'Отмена', style: 'cancel' },
+                  {
+                    text: 'Открыть настройки',
+                    onPress: () => Linking.openSettings().catch(() => {
+                      setGalleryError('Не удалось открыть настройки. Разрешите доступ к фото в настройках приложения.');
+                    }),
+                  },
+                ]
+          );
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 0.7,
+      });
+      if (result.canceled) return;
+
+      const photo = result.assets?.[0];
+      if (!photo?.uri) throw new Error('No image returned');
+      setImageUri(photo.uri);
+      setCameraReady(false);
+      setPhase('preview');
+    } catch {
+      setGalleryError('Не удалось выбрать фото. Попробуйте ещё раз.');
+    } finally {
+      pickerBusy.current = false;
+      setIsPicking(false);
+    }
+  };
 
   const openCamera = () => {
     setCameraReady(false);
@@ -73,7 +132,8 @@ export default function ScanScreen() {
     setPhase('capturing');
     try {
       // The photo isn't sent anywhere yet, recognition will be added later
-      await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      if (photo?.uri) setImageUri(photo.uri);
       setPhase('success');
     } catch {
       setPhase('camera');
@@ -82,6 +142,7 @@ export default function ScanScreen() {
   };
 
   const handleScan = async () => {
+    if (pickerBusy.current) return;
     if (phase === 'camera') {
       await takeScan();
       return;
@@ -148,13 +209,13 @@ export default function ScanScreen() {
             <Text style={[styles.hintLabel, { color: theme.accent }]}>AI-подсказка</Text>
           </View>
           <Text style={[styles.hintText, { color: theme.textPrimary }]}>
-            Сфотографируй полки целиком — так Fridgy точнее распознает продукты
+            Сфотографируй полки целиком, так Fridgy точнее распознает продукты
           </Text>
         </View>
 
         <ImageBackground
           style={styles.viewfinder}
-          source={require('@/assets/img/camera-bg.jpg')}
+          source={imageUri ? { uri: imageUri } : require('@/assets/img/camera-bg.jpg')}
           resizeMode="cover"
         >
           {(phase === 'camera' || phase === 'capturing') && (
@@ -175,16 +236,23 @@ export default function ScanScreen() {
               <View style={[styles.successIcon, { backgroundColor: theme.accent }]}>
                 <Ionicons name="checkmark" size={34} color="#FFFFFF" />
               </View>
-              <Text style={styles.successText}>Продукты отсканированы</Text>
+              <Text style={styles.successText}>Снимок сделан</Text>
             </View>
           ) : (
             <View style={styles.instruction}>
-              <Text style={styles.instructionText}>Поместите продукты в кадр</Text>
+              <Text style={styles.instructionText}>
+                {phase === 'preview' ? 'Фото из галереи выбрано' : 'Поместите продукты в кадр'}
+              </Text>
             </View>
           )}
         </ImageBackground>
 
         <View style={styles.actions}>
+          {galleryError && (
+            <Text accessibilityRole="alert" style={[styles.galleryError, { color: theme.textPrimary }]}>
+              {galleryError}
+            </Text>
+          )}
           <Pressable
             accessibilityRole="button"
             onPress={handleScan}
@@ -199,7 +267,7 @@ export default function ScanScreen() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Ionicons
-                name={phase === 'camera' ? 'camera-outline' : 'scan-outline'}
+                name={phase === 'camera' || phase === 'preview' ? 'camera-outline' : 'scan-outline'}
                 size={21}
                 color="#FFFFFF"
               />
@@ -207,23 +275,37 @@ export default function ScanScreen() {
             <Text style={styles.scanLabel}>
               {phase === 'camera' || phase === 'capturing'
                 ? 'Сделать снимок'
-                : phase === 'success'
-                  ? 'Сканировать снова'
-                  : 'Сканировать продукты'}
+                : phase === 'preview'
+                  ? 'Сделать новое фото'
+                  : phase === 'success'
+                    ? 'Сканировать снова'
+                    : 'Сканировать продукты'}
             </Text>
           </Pressable>
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Загрузить из галереи"
+            accessibilityState={{ disabled: galleryDisabled, busy: isPicking }}
+            onPress={pickGalleryPhoto}
+            disabled={galleryDisabled}
             style={({ pressed }) => [
               styles.action,
               styles.upload,
               { backgroundColor: theme.card, borderColor: theme.cardBorder },
-              pressed && styles.pressed,
+              (pressed || galleryDisabled) && styles.pressed,
             ]}
           >
-            <Image style={styles.thumbnail} source={require('@/assets/img/camera-bg.jpg')} />
+            {isPicking ? (
+              <ActivityIndicator color={theme.accent} />
+            ) : (
+              <Image
+                style={styles.thumbnail}
+                source={imageUri ? { uri: imageUri } : require('@/assets/img/camera-bg.jpg')}
+              />
+            )}
             <Text style={[styles.uploadLabel, { color: theme.textPrimary }]}>
-              Загрузить из галереи
+              {isPicking ? 'Открываем галерею...' : 'Загрузить из галереи'}
             </Text>
           </Pressable>
         </View>
@@ -356,6 +438,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope_500Medium',
     fontSize: 15,
     lineHeight: 20,
+  },
+  galleryError: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   pressed: {
     opacity: 0.7,
