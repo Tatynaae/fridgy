@@ -32,6 +32,16 @@ export default function AppTabs() {
           <TabTrigger name="profile" href="/profile" asChild>
             <TabButton>Профиль</TabButton>
           </TabTrigger>
+
+          {/* Auth screens: hidden triggers, only declare the routes */}
+          {["login", "register", "forgot-password", "reset-password"].map((name) => (
+            <TabTrigger
+              key={name}
+              name={name}
+              href={`/${name}` as never}
+              style={{ display: "none" }}
+            />
+          ))}
         </CustomTabList>
       </TabList>
     </Tabs>

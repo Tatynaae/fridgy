@@ -14,6 +14,8 @@ import { MaxContentWidth } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import { ThemedText } from "./themed-text";
 
+const AUTH_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
+
 export default function AppTabs() {
   const pathname = usePathname();
 
@@ -47,6 +49,20 @@ export default function AppTabs() {
 
           {/* Scan opens from the home screen, so it has no button of its own */}
           <TabTrigger name="scan" href="/scan" style={styles.hidden} />
+
+          {/* Auth screens: routes must be declared as triggers, the tab bar is hidden on them */}
+          <TabTrigger name="login" href="/login" style={styles.hidden} />
+          <TabTrigger name="register" href="/register" style={styles.hidden} />
+          <TabTrigger
+            name="forgot-password"
+            href="/forgot-password"
+            style={styles.hidden}
+          />
+          <TabTrigger
+            name="reset-password"
+            href="/reset-password"
+            style={styles.hidden}
+          />
         </CustomTabList>
       </TabList>
     </Tabs>
@@ -97,9 +113,14 @@ function TabButton({
 
 function CustomTabList(props: TabListProps) {
   const theme = useTheme();
+  const pathname = usePathname();
+  const isAuthScreen = AUTH_PATHS.includes(pathname);
 
   return (
-    <View {...props} style={styles.positioner}>
+    <View
+      {...props}
+      style={[styles.positioner, isAuthScreen && styles.hidden]}
+    >
       <View style={[styles.tabBar, { backgroundColor: theme.tabBar }]}>
         {props.children}
       </View>

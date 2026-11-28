@@ -54,3 +54,14 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Авторизация
+
+Экраны по макету Figma: `login`, `register`, `forgot-password` (+ «Проверьте почту»), `reset-password` (+ «Пароль обновлён») в `src/app/`, UI-компоненты — `src/components/auth/`. API — `src/api/`, состояние — `src/context/auth-context.tsx`.
+`accessToken` хранится в **expo-secure-store** (Keychain / Keystore), см. `src/lib/token-storage.ts`. При запуске токен проверяется через `GET /auth/me`.
+
+Запуск:
+1. Бэкенд: `cd server && cp .env.example .env` (задать `DB_PASSWORD` и `SMTP_HOST/SMTP_USER/SMTP_PASSWORD` — без SMTP сервер не стартует), затем `npm install && npm run db:up && npm run start:dev`.
+2. Клиент: `cd client && npm install && npx expo install expo-secure-store && npm start`.
+3. Адрес API — `EXPO_PUBLIC_API_URL` (по умолчанию `http://localhost:3000`, на Android-эмуляторе `http://10.0.2.2:3000`).
+4. Сброс пароля: в `server/.env` поставить `FRONTEND_URL` на адрес клиента (например, `http://localhost:8081` для web), письмо ведёт на `/reset-password?token=...`.
