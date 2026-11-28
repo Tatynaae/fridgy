@@ -1,4 +1,3 @@
-
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
@@ -6,7 +5,7 @@ import nodemailer, { type Transporter } from 'nodemailer';
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly transporter: Transporter;
+  private readonly transporter: Transporter | null;
 
   constructor(private readonly config: ConfigService) {
     const host = this.config.get<string>('SMTP_HOST');
@@ -15,6 +14,15 @@ export class MailService {
     const password = this.config.get<string>('SMTP_PASSWORD');
 
     if (!host || !user || !password) {
+      // локальная разработка: работаем без отправки писем
+      if (this.config.get<string>('NODE_ENV') !== 'production') {
+        this.logger.warn(
+          'SMTP is not configured. Password reset links will be logged to the terminal.',
+        );
+        this.transporter = null;
+        return;
+      }
+
       throw new Error('SMTP_HOST, SMTP_USER and SMTP_PASSWORD must be configured');
     }
 
@@ -32,6 +40,12 @@ export class MailService {
       .replace(/\/+$/, '');
 
     const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+
+    if (!this.transporter) {
+      this.logger.warn(`Local password reset link for ${email}: ${resetUrl}`);
+      return;
+    }
+
     const from = this.config.get<string>('SMTP_USER');
 
     await this.transporter.sendMail({
@@ -57,6 +71,11 @@ export class MailService {
   }
 
   async verifyConnection(): Promise<void> {
+    if (!this.transporter) {
+      this.logger.warn('SMTP is not configured; skipping connection verification.');
+      return;
+    }
+
     await this.transporter.verify();
     this.logger.log('SMTP connection verified');
   }
