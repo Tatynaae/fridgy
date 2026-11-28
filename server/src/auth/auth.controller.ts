@@ -4,6 +4,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Post,
   Req,
   UseGuards,
@@ -13,6 +14,7 @@ import { registerSchema } from './dto/register.dto.js';
 import { loginSchema } from './dto/login.dto.js';
 import { forgotPasswordSchema } from './dto/forgot-password.dto.js';
 import { resetPasswordSchema } from './dto/reset-password.dto.js';
+import { logoutSchema, refreshSchema } from './dto/refresh.dto.js';
 import { AuthService } from './auth.service.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
@@ -44,6 +46,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(200)
   async login(@Body() body: unknown) {
     const result = loginSchema.safeParse(body);
 
@@ -60,25 +63,52 @@ export class AuthController {
     );
   }
 
+  @Post('refresh')
+  @HttpCode(200)
+  async refresh(@Body() body: unknown) {
+    const result = refreshSchema.safeParse(body);
+
+    if (!result.success) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        errors: result.error.issues,
+      });
+    }
+
+    return this.authService.refresh(result.data.refreshToken);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@Req() request: AuthenticatedRequest) {
-    return {
-      id: request.user.id,
-      email: request.user.email,
-    };
+    return this.authService.me(request.user.id);
   }
 
   @Post('logout')
+  @HttpCode(200)
   @UseGuards(JwtAuthGuard)
-  logout(@Req() request: AuthenticatedRequest) {
-    return this.authService.logout({
-      jti: request.user.jti,
-      exp: request.user.exp,
-    });
+  logout(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
+    const result = logoutSchema.safeParse(body ?? {});
+
+    if (!result.success) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        errors: result.error.issues,
+      });
+    }
+
+    return this.authService.logout(
+      {
+        jti: request.user.jti,
+        exp: request.user.exp,
+        userId: request.user.id,
+      },
+      result.data.refreshToken,
+    );
   }
 
   @Post('forgot-password')
+  @HttpCode(200)
   async forgotPassword(@Body() body: unknown) {
     const result = forgotPasswordSchema.safeParse(body);
 
@@ -93,6 +123,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @HttpCode(200)
   async resetPassword(@Body() body: unknown) {
     const result = resetPasswordSchema.safeParse(body);
 
